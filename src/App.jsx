@@ -1,2726 +1,4289 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Activity,
-  Scale,
+  Stethoscope,
+  Flame,
+  Ruler,
   Utensils,
-  Pill,
-  Layers,
-  TrendingUp,
-  Plus,
-  Trash2,
   Download,
   Upload,
   RotateCcw,
-  ChevronRight,
-  Info,
-  AlertTriangle,
-  BookOpen,
-  Ruler,
-  Sparkles,
-  CheckCircle2,
-  Search,
-  User,
-  Calendar,
-  Sliders,
-  ShieldAlert,
-  FileText,
-  ArrowUpRight,
-  Clock,
-  Edit3,
-  Check,
-  X,
-  Database,
-  Flame,
+  Plus,
+  Trash2,
   HeartPulse,
-} from "lucide-react";
+  Calendar,
+  Scale,
+  ArrowRightLeft,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Sparkles,
+  PieChart,
+  ShieldAlert,
+  Clock,
+  Layers,
+  Search,
+  FlaskConical,
+  FileText,
+  Info,
+  Target,
+  UserCheck,
+  Crosshair,
+  ChevronRight,
+  BookmarkCheck
+} from 'lucide-react';
 
-const STORAGE_KEY = "nexusprotocol_full_v1_state";
-
-const WEEK_DAYS = [
-  { index: 0, short: "Dom", full: "Domingo" },
-  { index: 1, short: "Seg", full: "Segunda-feira" },
-  { index: 2, short: "Ter", full: "Terça-feira" },
-  { index: 3, short: "Qua", full: "Quarta-feira" },
-  { index: 4, short: "Qui", full: "Quinta-feira" },
-  { index: 5, short: "Sex", full: "Sexta-feira" },
-  { index: 6, short: "Sáb", full: "Sábado" },
+// ============================================================================
+// 1. BASE DE DADOS CLÍNICA COMPLETA: 14 FÁRMACOS REGULAMENTADOS (ANVISA/FDA)
+// ============================================================================
+const DRUG_CATEGORIES = [
+  { id: 'all', label: 'Todos (14)' },
+  { id: 'peptideos', label: '1. Peptídeos & Incretinas' },
+  { id: 'hormonios', label: '2. Hormônios & TRT' },
+  { id: 'tireoide', label: '3. Eixo Tireoidiano' },
+  { id: 'cardiometabolico', label: '4. Cardiometabólico' }
 ];
 
-const DEFAULT_FOODS = [
-  { id: "f1", name: "Peito de frango grelhado (100g)", kcal: 165, p: 31.0, c: 0.0, g: 3.6, group: "Proteína" },
-  { id: "f2", name: "Ovo inteiro cozido (100g ~ 2 un.)", kcal: 144, p: 12.6, c: 0.8, g: 9.6, group: "Proteína" },
-  { id: "f3", name: "Clara de ovo cozida (100g)", kcal: 52, p: 10.9, c: 0.7, g: 0.2, group: "Proteína" },
-  { id: "f4", name: "Patinho bovino grelhado (100g)", kcal: 219, p: 35.9, c: 0.0, g: 7.3, group: "Proteína" },
-  { id: "f5", name: "Tilápia grelhada (100g)", kcal: 128, p: 26.2, c: 0.0, g: 2.7, group: "Proteína" },
-  { id: "f6", name: "Whey protein concentrado (100g)", kcal: 400, p: 80.0, c: 8.3, g: 5.0, group: "Proteína" },
-  { id: "f7", name: "Iogurte natural desnatado (100g)", kcal: 44, p: 4.2, c: 5.6, g: 0.2, group: "Laticínio" },
-  { id: "f8", name: "Queijo minas frescal (100g)", kcal: 264, p: 17.4, c: 3.2, g: 20.2, group: "Laticínio" },
-  { id: "f9", name: "Queijo muçarela light (100g)", kcal: 260, p: 25.0, c: 3.3, g: 16.0, group: "Laticínio" },
-  { id: "f10", name: "Batata inglesa cozida (100g)", kcal: 86, p: 1.7, c: 20.1, g: 0.1, group: "Carboidrato" },
-  { id: "f11", name: "Arroz branco cozido (100g)", kcal: 130, p: 2.7, c: 28.2, g: 0.3, group: "Carboidrato" },
-  { id: "f12", name: "Aveia em flocos (100g)", kcal: 380, p: 13.8, c: 66.3, g: 7.0, group: "Carboidrato" },
-  { id: "f13", name: "Torrada integral / Levtoast (100g)", kcal: 380, p: 13.0, c: 71.0, g: 4.5, group: "Carboidrato" },
-  { id: "f14", name: "Banana prata (100g)", kcal: 98, p: 1.3, c: 25.1, g: 0.2, group: "Carboidrato" },
-  { id: "f15", name: "Doce de leite pastoso (100g)", kcal: 310, p: 7.0, c: 56.0, g: 6.5, group: "Carboidrato" },
-  { id: "f16", name: "Amendoim torrado sem sal (100g)", kcal: 587, p: 26.0, c: 16.0, g: 49.3, group: "Gordura" },
-  { id: "f17", name: "Azeite de oliva extravirgem (100ml)", kcal: 884, p: 0.0, c: 0.0, g: 100.0, group: "Gordura" },
-  { id: "f18", name: "Abacate / Avocado (100g)", kcal: 160, p: 2.0, c: 8.5, g: 14.7, group: "Gordura" },
-];
-
-const DRUG_CATALOG = [
+const REGULATED_DRUGS = [
+  // CATEGORIA 1: PEPTÍDEOS DE EMAGRECIMENTO & INCRETINAS
   {
-    id: "semaglutida",
-    name: "Semaglutida",
-    nicknames: ["Ozempic", "Wegovy", "Rybelsus"],
-    category: "Peptídeos Metabólicos & Incretinas",
-    route: "SC semanal (ou VO diário)",
+    id: 'semaglutida',
+    category: 'peptideos',
+    categoryLabel: 'Peptídeos Metabólicos & Incretinas',
+    name: 'Semaglutida',
+    brandNames: '"Ozempic" / "Wegovy" / "Rybelsus"',
+    drugClass: 'Agonista Seletivo do Receptor GLP-1',
+    isIncretin: true,
+    isOral: false,
     halfLifeHours: 168,
-    intervalDays: 7,
-    defaultDoseMg: 0.5,
-    unit: "mg",
-    peakDays: 2,
-    steadyStateWeeks: 4,
-    potencyFactor: 1.0,
-    color: "#22d3ee",
-    summary:
-      "Análogo do peptídeo semelhante ao glucagon-1 (GLP-1) com resistência à degradação pela DPP-4, promovendo secreção de insulina glicose-dependente, supressão do glucagon e retardo do esvaziamento gástrico.",
+    halfLifeDays: 7.0,
+    tmaxText: '24 a 72 horas (1–3 dias)',
+    bioavailability: '~89% (Subcutânea) | ~0,4–1% (Oral com SNAC)',
+    metabolismExcretion: 'Clivagem proteolítica por endopeptidases e beta-oxidação da cadeia graxa; excreção urinária e fecal.',
+    route: 'SC Semanal (ou Oral Diária)',
+    defaultFreqDays: 7,
+    unit: 'mg',
+    standardDoses: [0.25, 0.5, 1.0, 1.7, 2.4],
+    defaultDose: 1.0,
+    color: '#00e5ff',
+    indications:
+      'Tratamento do Diabetes Mellitus tipo 2 (DM2) insuficientemente controlado, redução do risco cardiovascular maior em adultos com DM2 ou obesidade/sobrepeso com doença cardiovascular estabelecida, e controle crônico de peso (IMC ≥ 30 kg/m² ou ≥ 27 kg/m² com comorbidades).',
     mechanism:
-      "Liga-se seletivamente aos receptores de GLP-1 no pâncreas (estimulando liberação de insulina apenas na presença de hiperglicemia e reduzindo secreção pós-prandial de glucagon) e em núcleos hipotalâmicos e do tronco cerebral ligados à saciedade e ao controle do apetite. Também reduz a velocidade de esvaziamento gástrico nas fases iniciais do tratamento.",
-    studies:
-      "Nos ensaios clínicos da família STEP (ex.: STEP 1 em obesidade sem diabetes), doses escalonadas até 2,4 mg/semana associaram-se a redução média de peso corporal em torno de ~14,9% em 68 semanas versus ~2,4% com placebo, além de melhora de marcadores cardiometabólicos e redução de eventos cardiovasculares maiores no estudo SELECT.",
-    sideEffects: [
-      "Náusea, plenitude gástrica, refluxo, constipação ou diarreia (mais frequentes na titulação)",
-      "Redução acentuada do apetite e risco de baixa ingestão proteica se não houver planejamento",
-      "Atenção clínica a colelitíase, pancreatite aguda e desidratação",
-    ],
-    contraindications: [
-      "Histórico pessoal ou familiar de carcinoma medular de tireoide (CMT) ou NEM tipo 2",
-      "Gestação, lactação ou hipersensibilidade conhecida ao princípio ativo",
-    ],
-    monitoring: ["HbA1c e glicemia de jejum", "Função renal e hidratação", "Perfil lipídico e enzimas hepáticas"],
-    timelines: {
-      early: "Semanas 1–2: Início do sinal de saciedade precoce e possível desconforto GI leve; concentração plasmática ainda em ascensão.",
-      mid: "Semanas 4–8: Aproximação do estado estacionário (4–5 meias-vidas); redução mais consistente da ingestão calórica espontânea.",
-      late: "Semanas 12+: Consolidação da perda ponderal, exigindo vigilância de massa magra com aporte proteico e treino resistido.",
+      'Análogo de GLP-1 humano com 94% de homologia estrutural ligado reversivelmente à albumina plasmática via cadeia diácida C18. Atua em receptores GLP-1R nas células beta pancreáticas (estimulando secreção de insulina de forma glicose-dependente), células alfa (suprimindo glucagon), trato gastrointestinal (retardando o esvaziamento gástrico) e hipotálamo/tronco encefálico (núcleo arqueado POMC/CART e inibição de NPY/AgRP, reduzindo apetite e desejo por alimentos hiperpalatáveis).',
+    clinicalStudies:
+      '• Programa STEP (STEP 1, n=1.961): Perda ponderal média de 14,9% em 68 semanas com 2,4 mg SC vs. 2,4% no placebo, com 86,4% atingindo perda ≥ 5%.\n• Estudo SELECT (n=17.604): Redução de 20% na incidência de eventos cardiovasculares maiores (MACE: morte CV, infarto ou AVC não fatal) em pacientes com obesidade sem diabetes.\n• Programa SUSTAIN: Redução média de HbA1c entre -1,5% e -1,8%.',
+    timelineEffects: {
+      w1_2: 'Início do retardo do esvaziamento gástrico e saciedade precoce; maior incidência de náuseas transitórias na titulação inicial (0,25 mg).',
+      w4_8: 'Atingimento do estado estacionário (steady-state em ~4–5 semanas); estabilização glicêmica pós-prandial e redução consistente da ingestão energética.',
+      w12_plus: 'Platô farmacocinético consolidado; redução expressiva de gordura visceral, circunferência abdominal e proteína C-reativa ultrassensível (PCR-us).'
     },
+    sideEffects:
+      'Náuseas (15–44%), diarreia, constipação, vômitos, dispepsia, refluxo gastroesofágico, cefaleia, fadiga e colelitíase secundária à perda rápida de peso.',
+    contraindications:
+      'Histórico pessoal ou familiar de Carcinoma Medular de Tireoide (CMT), Síndrome de Neoplasia Endócrina Múltipla tipo 2 (NEM 2), gestação/lactação e pancreatite aguda prévia.',
+    labMonitoring:
+      'Glicemia de jejum, HbA1c, perfil lipídico, amilase/lipase (se dor abdominal), creatinina/TFG (se desidratação GI) e ultrassonografia biliar se sintomático.'
   },
   {
-    id: "tirzepatida",
-    name: "Tirzepatida",
-    nicknames: ["Mounjaro", "Zepbound"],
-    category: "Peptídeos Metabólicos & Incretinas",
-    route: "SC semanal",
+    id: 'tirzepatida',
+    category: 'peptideos',
+    categoryLabel: 'Peptídeos Metabólicos & Incretinas',
+    name: 'Tirzepatida',
+    brandNames: '"Mounjaro" / "Zepbound"',
+    drugClass: 'Agonista Duplo dos Receptores GIP e GLP-1 ("Twincretin")',
+    isIncretin: true,
+    isOral: false,
     halfLifeHours: 120,
-    intervalDays: 7,
-    defaultDoseMg: 5,
-    unit: "mg",
-    peakDays: 1.5,
-    steadyStateWeeks: 4,
-    potencyFactor: 1.15,
-    color: "#38bdf8",
-    summary:
-      "Agonista duplo dos receptores de GIP (polipeptídeo insulinotrópico dependente de glicose) e GLP-1, desenhado para ação metabólica e incretínica combinada.",
+    halfLifeDays: 5.0,
+    tmaxText: '8 a 72 horas',
+    bioavailability: '~80% (Subcutânea)',
+    metabolismExcretion: 'Clivagem proteolítica da cadeia peptídica e beta-oxidação do diácido C20; metabólitos eliminados na urina e fezes.',
+    route: 'SC Semanal',
+    defaultFreqDays: 7,
+    unit: 'mg',
+    standardDoses: [2.5, 5.0, 7.5, 10.0, 12.5, 15.0],
+    defaultDose: 5.0,
+    color: '#14b8a6',
+    indications:
+      'Controle glicêmico em adultos com Diabetes Mellitus tipo 2 e tratamento farmacológico crônico da obesidade (IMC ≥ 30 kg/m²) ou sobrepeso (IMC ≥ 27 kg/m²) com comorbidades metabólicas ou apneia obstrutiva do sono.',
     mechanism:
-      "Ativa tanto receptores GIP quanto GLP-1. O agonismo de GLP-1 modula saciedade, esvaziamento gástrico e secreção glicose-dependente de insulina, enquanto a ativação de receptores GIP participa da sinalização adipocitária e potencializa a resposta insulínica em modelos clínicos.",
-    studies:
-      "Nos programas SURMOUNT (como SURMOUNT-1), o escalonamento até 5 mg, 10 mg e 15 mg semanais demonstrou reduções médias de peso corporal dose-dependentes (chegando a ~15% a ~20,9% em 72 semanas nas maiores doses avaliadas, frente a ~3,1% no placebo), além de melhoras expressivas em sensibilidade à insulina e circunferência da cintura.",
-    sideEffects: [
-      "Náuseas, diarreia, vômitos ou constipação durante ajustes de dose",
-      "Saciedade intensa com risco de déficit energético excessivo se não monitorado",
-      "Monitorar sinais de desidratação ou dor abdominal persistente",
-    ],
-    contraindications: [
-      "Histórico pessoal ou familiar de carcinoma medular de tireoide (CMT) ou NEM tipo 2",
-      "Gestação, lactação ou hipersensibilidade ao fármaco",
-    ],
-    monitoring: ["Glicemia de jejum / HbA1c", "Eletrólitos e função renal", "Composição corporal (massa magra vs. gordura)"],
-    timelines: {
-      early: "Semanas 1–2: Resposta rápida na sinalização de saciedade e redução do impulso alimentar; adaptação GI inicial.",
-      mid: "Semanas 4–8: Estabilização da curva semanal; queda expressiva do apetite e necessidade de priorizar proteína por refeição.",
-      late: "Semanas 12+: Fase de perda ponderal sustentada ou ajuste de dose de manutenção conforme metas clínicas.",
+      'Polipeptídeo sintético de 39 aminoácidos com agonismo dual nos receptores GIP (polipeptídeo insulinotrópico dependente de glicose) e GLP-1. O componente GIP atua diretamente nos adipócitos brancos melhorando o armazenamento lipídico saudável, reduzindo a lipotoxicidade ectópica (hepática e muscular) e potencializando a sinalização central de saciedade mediada pelo GLP-1.',
+    clinicalStudies:
+      '• Estudo SURMOUNT-1 (n=2.539, 72 semanas): Perda ponderal média de 15,0% (5 mg), 19,5% (10 mg) e 20,9% (15 mg) vs. 3,1% no placebo; 95,3% dos participantes com pré-diabetes reverteram para normoglicemia.\n• Estudo SURMOUNT-2 & Programa SURPASS: Redução de HbA1c de até -2,3% e melhora superior na sensibilidade insulínica (HOMA-IR) comparado à semaglutida 1 mg.',
+    timelineEffects: {
+      w1_2: 'Supressão pronunciada do apetite ("ruído alimentar") e atenuação imediata de picos glicêmicos pós-prandiais.',
+      w4_8: 'Steady-state alcançado em ~3,5 a 4 semanas (20–25 dias); queda expressiva do índice HOMA-IR, triglicerídeos e esteatose hepática.',
+      w12_plus: 'Redução acentuada de massa gorda total e gordura visceral; exige aporte proteico ≥ 1,8–2,2 g/kg/dia e treino resistido para preservação da massa magra.'
     },
+    sideEffects:
+      'Náuseas, diarreia, redução acentuada do apetite, constipação, desconforto epigástrico, eructação e fadiga transitória durante escalonamento de dose.',
+    contraindications:
+      'Histórico pessoal/familiar de Carcinoma Medular de Tireoide (CMT), NEM 2, hipersensibilidade conhecida, gestação e gastroparesia grave.',
+    labMonitoring:
+      'HbA1c, insulina basal/HOMA-IR, perfil lipídico, transaminases hepáticas (TGO/TGP/GGT), função renal e avaliação de composição corporal (adipômetro/DXA).'
   },
   {
-    id: "liraglutida",
-    name: "Liraglutida",
-    nicknames: ["Saxenda", "Victoza"],
-    category: "Peptídeos Metabólicos & Incretinas",
-    route: "SC diário",
+    id: 'liraglutida',
+    category: 'peptideos',
+    categoryLabel: 'Peptídeos Metabólicos & Incretinas',
+    name: 'Liraglutida',
+    brandNames: '"Saxenda" / "Victoza"',
+    drugClass: 'Agonista de Receptor GLP-1 de Ação Diária',
+    isIncretin: true,
+    isOral: false,
     halfLifeHours: 13,
-    intervalDays: 1,
-    defaultDoseMg: 1.8,
-    unit: "mg",
-    peakDays: 0.5,
-    steadyStateWeeks: 1,
-    potencyFactor: 0.85,
-    color: "#34d399",
-    summary:
-      "Agonista de receptor de GLP-1 de administração diária e meia-vida mais curta (~13 horas), permitindo ajustes diários de tolerabilidade.",
+    halfLifeDays: 0.54,
+    tmaxText: '8 a 12 horas',
+    bioavailability: '~55% (Subcutânea)',
+    metabolismExcretion: 'Degradação endógena por DPP-4 e endopeptidase neutra (NEP) sem órgão específico de eliminação.',
+    route: 'SC Diária',
+    defaultFreqDays: 1,
+    unit: 'mg',
+    standardDoses: [0.6, 1.2, 1.8, 2.4, 3.0],
+    defaultDose: 1.8,
+    color: '#38bdf8',
+    indications:
+      'Controle glicêmico em DM2 (até 1,8 mg/dia - "Victoza") e controle crônico de peso em adultos e adolescentes com obesidade (até 3,0 mg/dia - "Saxenda").',
     mechanism:
-      "Estimula a liberação de insulina dependente de glicose, reduz a secreção inadequada de glucagon e atua em centros hipotalâmicos de saciedade, retardando o esvaziamento gástrico.",
-    studies:
-      "No estudo SCALE Obesity and Prediabetes (3,0 mg/dia), promoveu redução média de cerca de ~8,0% do peso corporal em 56 semanas versus ~2,6% com placebo, além de redução na prevalência de pré-diabetes.",
-    sideEffects: [
-      "Náuseas, diarreia, constipação e cefaleia nas primeiras semanas",
-      "Aumento discreto da frequência cardíaca de repouso em alguns indivíduos",
-    ],
-    contraindications: [
-      "Histórico de CMT ou NEM tipo 2",
-      "Gestação, lactação ou hipersensibilidade",
-    ],
-    monitoring: ["HbA1c e glicemia", "Frequência cardíaca e pressão arterial", "Função renal"],
-    timelines: {
-      early: "Semanas 1–2: Atinge platô diário rapidamente devido à meia-vida de ~13h; titulação gradual ajuda na tolerância GI.",
-      mid: "Semanas 4–8: Controle diário estável do apetite; vantagem de poder pausar/ajustar com menor persistência residual.",
-      late: "Semanas 12+: Avaliação de resposta clínica (meta clássica de ≥5% de perda ponderal em 12 semanas na dose alvo).",
+      'Análogo acilado de GLP-1 humano (97% homologia) com cadeia de ácido palmítico C16 que promove auto-associação em heptâmeros no subcutâneo e ligação à albumina, conferindo meia-vida de ~13 horas e controle diário contínuo da saciedade hipotalâmica.',
+    clinicalStudies:
+      '• Programa SCALE Obesity & Prediabetes (n=3.731, 56 semanas): Redução ponderal média de 8,0% (vs. 2,6% placebo) com 3,0 mg/dia.\n• Estudo LEADER (n=9.340): Redução de 13% em eventos cardiovasculares maiores e 22% na morte cardiovascular em pacientes com DM2 de alto risco.',
+    timelineEffects: {
+      w1_2: 'Equilíbrio plasmático rápido (steady-state em 2–3 dias); titulação semanal de 0,6 mg minimiza náuseas agudas.',
+      w4_8: 'Atingimento da dose alvo (1,8 mg ou 3,0 mg); redução consistente da ingestão calórica e melhora da glicemia de jejum.',
+      w12_plus: 'Manutenção de saciedade diária previsível; elevação discreta e esperada da frequência cardíaca de repouso (2–3 bpm).'
     },
+    sideEffects:
+      'Náuseas transitórias (especialmente nas primeiras 4 semanas), cefaleia, constipação, dispepsia, reação eritematosa no local da aplicação e discreto aumento da FCR.',
+    contraindications:
+      'Histórico pessoal ou familiar de CMT, NEM 2, gestação, amamentação e insuficiência cardíaca classe IV NYHA.',
+    labMonitoring:
+      'Glicemia, HbA1c, frequência cardíaca de repouso (FCR), lipídios séricos e enzimas pancreáticas se dor abdominal.'
   },
   {
-    id: "dulaglutida",
-    name: "Dulaglutida",
-    nicknames: ["Trulicity"],
-    category: "Peptídeos Metabólicos & Incretinas",
-    route: "SC semanal",
+    id: 'dulaglutida',
+    category: 'peptideos',
+    categoryLabel: 'Peptídeos Metabólicos & Incretinas',
+    name: 'Dulaglutida',
+    brandNames: '"Trulicity"',
+    drugClass: 'Agonista GLP-1 Fundido a Fragmento Fc (IgG4)',
+    isIncretin: true,
+    isOral: false,
     halfLifeHours: 112,
-    intervalDays: 7,
-    defaultDoseMg: 1.5,
-    unit: "mg",
-    peakDays: 2,
-    steadyStateWeeks: 3,
-    potencyFactor: 0.82,
-    color: "#a78bfa",
-    summary:
-      "Agonista de receptor de GLP-1 conjugado a fragmento Fc de IgG4 humana, de aplicação semanal.",
+    halfLifeDays: 4.67,
+    tmaxText: '24 a 72 horas (média 48h)',
+    bioavailability: '~47% a 65% (Subcutânea)',
+    metabolismExcretion: 'Catabolismo proteico geral em aminoácidos componentes; sem depuração renal significativa por alto peso molecular (~63 kDa).',
+    route: 'SC Semanal',
+    defaultFreqDays: 7,
+    unit: 'mg',
+    standardDoses: [0.75, 1.5, 3.0, 4.5],
+    defaultDose: 1.5,
+    color: '#a78bfa',
+    indications:
+      'Tratamento de adultos com Diabetes Mellitus tipo 2 e redução de risco cardiovascular primário e secundário em pacientes diabéticos.',
     mechanism:
-      "Aumenta o AMPc intracelular nas células beta pancreáticas na presença de glicose elevada, suprime glucagon e modula saciedade via GLP-1.",
-    studies:
-      "Nos programas AWARD e no estudo cardiovascular REWIND, demonstrou redução sustentada de HbA1c em diabetes tipo 2 e redução de desfechos cardiovasculares adversos maiores.",
-    sideEffects: [
-      "Náusea, vômito, diarreia e dor abdominal leve a moderada",
-      "Plenitude pós-prandial",
-    ],
-    contraindications: [
-      "Histórico de CMT ou NEM tipo 2",
-      "Gestação ou lactação",
-    ],
-    monitoring: ["HbA1c", "Função renal", "Sintomas gastrointestinais"],
-    timelines: {
-      early: "Semanas 1–2: Início da modulação glicêmica e saciedade moderada.",
-      mid: "Semanas 4–8: Estabilização das concentrações semanais e redução de picos glicêmicos pós-prandiais.",
-      late: "Semanas 12+: Consolidação do controle glicêmico e metabólico.",
+      'Dois análogos idênticos de GLP-1 resistentes à DPP-4 ligados covalentemente a uma cadeia pesada modificada de imunoglobulina G4 humana (Fc), reduzindo a filtração glomerular e conferindo meia-vida de ~4,7 dias.',
+    clinicalStudies:
+      '• Estudo REWIND (n=9.901, seguimento mediano de 5,4 anos): Redução de 12% em eventos cardiovasculares maiores inclusive em pacientes sem doença cardiovascular estabelecida (prevenção primária).\n• Programa AWARD: Redução sustentada de HbA1c de -1,2% a -1,8% e perda ponderal moderada (3,0 a 4,7 kg com 4,5 mg).',
+    timelineEffects: {
+      w1_2: 'Início gradual da modulação pós-prandial de insulina e glucagon nas primeiras 48h pós-injeção.',
+      w4_8: 'Steady-state atingido em ~3 semanas (~21 dias); redução da variabilidade glicêmica e saciedade moderada.',
+      w12_plus: 'Proteção endotelial e renal (redução de albuminúria) associada ao controle metabólico sustentado.'
     },
+    sideEffects:
+      'Náuseas, diarreia, dor abdominal leve, diminuição do apetite, fadiga e elevação assintomática discreta de enzimas pancreáticas.',
+    contraindications:
+      'Histórico pessoal/familiar de Carcinoma Medular de Tireoide (CMT), NEM 2, doença gastrointestinal grave e gestação.',
+    labMonitoring:
+      'HbA1c, glicemia de jejum, relação albumina/creatinina urinária, TFG e perfil lipídico.'
   },
+
+  // CATEGORIA 2: HORMÔNIOS & REPOSIÇÃO (TRT REGULAMENTADA)
   {
-    id: "durateston",
-    name: "Associação de Ésteres de Testosterona",
-    nicknames: ["Durateston", "Sustanon 250"],
-    category: "Hormônios & Reposição (TRT)",
-    route: "IM profunda (intervalo variável conforme prescrição)",
-    halfLifeHours: 216,
-    intervalDays: 14,
-    defaultDoseMg: 250,
-    unit: "mg",
-    peakDays: 2,
-    steadyStateWeeks: 5,
-    potencyFactor: 1.0,
+    id: 'durateston',
+    category: 'hormonios',
+    categoryLabel: 'Hormônios & Reposição (TRT)',
+    name: 'Associação de 4 Ésteres de Testosterona',
+    brandNames: '"Durateston" / "Sustanon 250"',
+    drugClass: 'Blend Multi-Éster Androgênico (Propionato, Fempropionato, Isocaproato, Decanoato)',
+    isIncretin: false,
+    isOral: false,
     isMultiEster: true,
-    color: "#f59e0b",
-    summary:
-      "Blend de quatro ésteres de testosterona (propionato 30 mg, fempropionato 60 mg, isocaproato 60 mg e decanoato 100 mg a cada 250 mg) com liberação escalonada.",
+    esters: [
+      { name: 'Propionato (30mg)', fraction: 0.12, halfLifeDays: 0.85, ka: 4.5 },
+      { name: 'Fempropionato (60mg)', fraction: 0.24, halfLifeDays: 2.0, ka: 2.8 },
+      { name: 'Isocaproato (60mg)', fraction: 0.24, halfLifeDays: 4.0, ka: 1.8 },
+      { name: 'Decanoato (100mg)', fraction: 0.40, halfLifeDays: 10.0, ka: 1.1 }
+    ],
+    halfLifeHours: 180,
+    halfLifeDays: 7.5,
+    tmaxText: '24 a 48 horas (Pico do Propionato/Fempropionato)',
+    bioavailability: '~100% (Intramuscular Profunda em Veículo Oleoso)',
+    metabolismExcretion: 'Hidrólise plasmática por esterases liberando testosterona livre; metabolização hepática em androsterona/etiocolanolona e excreção urinária (90%).',
+    route: 'IM Profunda',
+    defaultFreqDays: 14,
+    unit: 'mg',
+    standardDoses: [125, 250, 500],
+    defaultDose: 250,
+    color: '#f472b6',
+    indications:
+      'Terapia de reposição de testosterona (TRT) em homens adultos com hipogonadismo primário ou secundário (hipogonadotrófico) confirmado por sinais clínicos e duas dosagens matinais baixas de testosterona sérica.',
     mechanism:
-      "Atua via receptor androgênico intracelular regulando transcrição gênica ligada a síntese proteica muscular, eritropoiese, densidade mineral óssea, libido e manutenção de caracteres sexuais secundários. A combinação de ésteres curtos e longos gera liberação mais rápida no início e cauda prolongada pelo decanoato.",
-    studies:
-      "Em diretrizes de terapia de reposição de testosterona (TRT) para hipogonadismo masculino confirmado clínica e laboratorialmente, a reposição androgênica melhora sintomas de deficiência androgênica, massa magra e densidade óssea, exigindo monitoramento de hematócrito, PSA, perfil lipídico e estradiol.",
-    sideEffects: [
-      "Aumento de hematócrito/hemoglobina (risco de policitemia), retenção hídrica ou acne/oleosidade",
-      "Supressão do eixo hipotálamo-hipófise-gonadal (LH/FSH) e redução da espermatogênese/fertilidade",
-      "Alterações em colesterol HDL/LDL, pressão arterial ou sensibilidade mamária (conversão via aromatase)",
-    ],
-    contraindications: [
-      "Carcinoma de próstata ou carcinoma de mama masculino suspeito ou confirmado",
-      "Hematócrito basal elevado sem investigação, apneia do sono grave não tratada ou desejo imediato de fertilidade sem manejo específico",
-    ],
-    monitoring: ["Testosterona total e livre, LH, FSH e estradiol", "Hemograma completo (hematócrito)", "PSA, perfil lipídico, função hepática e PA"],
-    timelines: {
-      early: "Semanas 1–2: Pico inicial mais precoce pelos ésteres curtos (propionato/fempropionato) e início de retenção hídrica ou mudanças de humor/energia.",
-      mid: "Semanas 4–8: Acúmulo do éster mais longo (decanoato) e supressão progressiva de LH/FSH endógenos.",
-      late: "Semanas 12+: Avaliação laboratorial de vale/pico, hematócrito e resposta clínica em massa magra, força e composição corporal.",
+      'Combinação de 4 ésteres em 250 mg/mL (30 mg Propionato + 60 mg Fempropionato + 60 mg Isocaproato + 100 mg Decanoato). A lipofilicidade crescente das cadeias controla a velocidade de difusão do depósito oleoso intramuscular para a circulação: o Propionato garante ação rápida em 24h, enquanto Fempropionato, Isocaproato e Decanoato sustentam a liberação por até 2–3 semanas. A testosterona livre liga-se ao receptor androgênico (AR) citoplasmático, transloca-se ao núcleo e regula transcrição gênica anabólica, eritropoiética e neuroendócrina.',
+    clinicalStudies:
+      '• Farmacocinética Clínica (Behre & Nieschlag): Uma ampola de 250 mg gera pico sérico de testosterona total entre 24–48h pós-injeção, retornando ao limite inferior da normalidade entre os dias 14 e 21.\n• Consensos SBEM / Endocrine Society: A reposição fisiológica restaura massa livre de gordura (+1,5 a +3,0 kg), densidade mineral óssea, hematócrito, sensibilidade insulínica e função sexual em homens hipogonádicos.',
+    timelineEffects: {
+      w1_2: 'Pico androgênico rápido (24–48h) com melhora de libido, disposição e retenção hídrica leve; feedback negativo inicial sobre LH e FSH hipofisários.',
+      w4_8: 'Estabilização do componente Decanoato; estímulo à secreção renal de eritropoietina e aumento da síntese proteica miofibrilar.',
+      w12_plus: 'Remodelação corporal (redução de tecido adiposo visceral e ganho de massa magra) e elevação de hemoglobina/hematócrito; exige vigilância de estradiol (E2) e perfil lipídico.'
     },
+    sideEffects:
+      'Eritrocitose (elevação de hematócrito > 52%), supressão do eixo hipotálamo-hipófise-testicular (oligospermia/atrofia testicular), aromatização periférica em estradiol (ginecomastia/retenção), acne, oleosidade e redução de HDL-C.',
+    contraindications:
+      'Carcinoma de próstata ou mama masculina suspeito/confirmado, hematócrito basal > 54%, insuficiência cardíaca descompensada, apneia obstrutiva do sono grave não tratada e desejo imediato de fertilidade sem terapia adjuvante.',
+    labMonitoring:
+      'Testosterona total e livre, Estradiol (E2 ultrasensível), Hemograma completo (Hematócrito/Hemoglobina), PSA total/livre, Perfil lipídico (HDL/LDL) e TGO/TGP a cada 3–6 meses.'
   },
   {
-    id: "cipionato",
-    name: "Cipionato de Testosterona",
-    nicknames: ["Deposteron"],
-    category: "Hormônios & Reposição (TRT)",
-    route: "IM profunda",
+    id: 'cipionato_testosterona',
+    category: 'hormonios',
+    categoryLabel: 'Hormônios & Reposição (TRT)',
+    name: 'Cipionato de Testosterona',
+    brandNames: '"Deposteron"',
+    drugClass: 'Éster Único de Testosterona de Ação Intermediária',
+    isIncretin: false,
+    isOral: false,
     halfLifeHours: 192,
-    intervalDays: 7,
-    defaultDoseMg: 100,
-    unit: "mg",
-    peakDays: 2,
-    steadyStateWeeks: 4,
-    potencyFactor: 0.96,
-    color: "#fb923c",
-    summary:
-      "Éster de testosterona de ação intermediária (~8 dias de meia-vida), amplamente utilizado em protocolos regulamentados de reposição hormonal masculina.",
+    halfLifeDays: 8.0,
+    tmaxText: '48 a 72 horas',
+    bioavailability: '~100% (Intramuscular / Subcutânea)',
+    metabolismExcretion: 'Clivagem por esterases séricas; redução via 5-alfa-redutase (DHT) e aromatização via CYP19A1 (Estradiol); excreção renal.',
+    route: 'IM Profunda',
+    defaultFreqDays: 7,
+    unit: 'mg',
+    standardDoses: [50, 100, 150, 200],
+    defaultDose: 100,
+    color: '#fb7185',
+    indications:
+      'Reposição hormonal masculina no hipogonadismo primário ou hipogonadotrófico congênito ou adquirido.',
     mechanism:
-      "Após injeção intramuscular em veículo oleoso, o cipionato é liberado gradualmente e clivado por esterases em testosterona livre, ligando-se a receptores androgênicos nucleares.",
-    studies:
-      "Estudos clínicos de reposição androgênica demonstram melhora de sintomas hipogonádicos, composição corporal e densidade mineral óssea quando os níveis séricos são mantidos na faixa fisiológica alvo.",
-    sideEffects: [
-      "Elevação de hematócrito, oleosidade cutânea, acne ou alterações lipídicas",
-      "Supressão do eixo HPG e redução da contagem espermática",
-      "Possível elevação de estradiol por aromatização",
-    ],
-    contraindications: [
-      "Câncer de próstata ou de mama masculino",
-      "Hematócrito elevado não controlado ou gestação/lactação",
-    ],
-    monitoring: ["Testosterona total/livre e estradiol", "Hemograma (hematócrito)", "PSA e perfil lipídico"],
-    timelines: {
-      early: "Semanas 1–2: Início da elevação sérica após aplicações e adaptação androgênica.",
-      mid: "Semanas 4–8: Aproximação do estado estacionário com curvas mais previsíveis conforme frequência de aplicação.",
-      late: "Semanas 12+: Revisão de exames laboratoriais e ajuste fino de dose/intervalo.",
+      'Éster ciclopentilpropionato ligado ao grupo 17-beta-hidroxila da testosterona, conferindo meia-vida de eliminação de ~8 dias. Proporciona curva de liberação mais previsível e com menor pico inicial abrupto do que o blend multi-éster.',
+    clinicalStudies:
+      '• Diretrizes Endocrine Society & AUA: Doses de 75–100 mg/semana (ou 150–200 mg a cada 14 dias) mantêm concentrações séricas médias na faixa eugonádica (450–750 ng/dL). Estudos demonstram que o fracionamento semanal reduz oscilações pico-vale e picos de aromatização.',
+    timelineEffects: {
+      w1_2: 'Elevação gradual da testosterona sérica sem pico agudo abrupto; melhora inicial de energia e humor.',
+      w4_8: 'Estado estacionário atingido em ~5 semanas (~35–40 dias); melhora da força muscular e sensibilidade insulínica.',
+      w12_plus: 'Redução de gordura visceral, aumento de massa magra e melhora progressiva da densidade mineral óssea em 6–12 meses.'
     },
+    sideEffects:
+      'Elevação do hematócrito/hemoglobina, supressão de gonadotrofinas (LH/FSH), elevação de estradiol sérico, acne, alopecia androgenética em predispostos e edema leve.',
+    contraindications:
+      'Câncer de próstata, câncer de mama masculino, policitemia (hematócrito > 54%), hipertensão grave não controlada e gravidez.',
+    labMonitoring:
+      'Testosterona total/livre (coletada no vale antes da próxima dose), Estradiol, Hematócrito, PSA, Perfil lipídico e SHBG.'
   },
   {
-    id: "undecanoato",
-    name: "Undecanoato de Testosterona",
-    nicknames: ["Nebido", "Hormus"],
-    category: "Hormônios & Reposição (TRT)",
-    route: "IM profunda de longa duração",
-    halfLifeHours: 600,
-    intervalDays: 70,
-    defaultDoseMg: 1000,
-    unit: "mg",
-    peakDays: 7,
-    steadyStateWeeks: 18,
-    potencyFactor: 1.0,
-    color: "#f472b6",
-    summary:
-      "Éster de cadeia longa (~25 dias de meia-vida em formulação oleosa), projetado para intervalos espaçados (ex.: 10 a 12 semanas após dose de ataque).",
+    id: 'undecanoato_testosterona',
+    category: 'hormonios',
+    categoryLabel: 'Hormônios & Reposição (TRT)',
+    name: 'Undecanoato de Testosterona',
+    brandNames: '"Nebido" / "Hormus"',
+    drugClass: 'Éster de Testosterona de Longa Duração (Depósito)',
+    isIncretin: false,
+    isOral: false,
+    halfLifeHours: 672,
+    halfLifeDays: 28.0,
+    tmaxText: '7 a 14 dias',
+    bioavailability: '~100% (IM Glútea Lenta — 4 mL)',
+    metabolismExcretion: 'Liberação ultra-lenta do veículo de óleo de rícino/benzoato de benzila; hidrólise completa para testosterona endógena.',
+    route: 'IM Longa Duração',
+    defaultFreqDays: 70,
+    unit: 'mg',
+    standardDoses: [500, 750, 1000],
+    defaultDose: 1000,
+    color: '#c084fc',
+    indications:
+      'Terapia de reposição de testosterona de longa duração no hipogonadismo masculino primário e secundário.',
     mechanism:
-      "A longa cadeia carbônica retarda a liberação do depósito intramuscular, produzindo níveis de testosterona mais estáveis entre aplicações em comparação a ésteres curtos.",
-    studies:
-      "Ensaios clínicos de TRT demonstraram manutenção estável da testosterona sérica em faixa fisiológica com menor frequência de injeções e melhora de parâmetros metabólicos e sexuais em homens com hipogonadismo.",
-    sideEffects: [
-      "Aumento de hematócrito, dor local transitória ou alterações lipídicas",
-      "Supressão do eixo HPG e da fertilidade",
-      "Raro: microembolia pulmonar oleosa imediata à aplicação (técnica de injeção lenta e criteriosa)",
-    ],
-    contraindications: [
-      "Carcinoma de próstata ou mama masculino",
-      "Hipersensibilidade ou hematócrito elevado sem controle",
-    ],
-    monitoring: ["Testosterona de vale antes da próxima dose", "Hemograma (hematócrito)", "PSA, lipidograma e função hepática"],
-    timelines: {
-      early: "Semanas 1–2: Elevação gradual após aplicação inicial.",
-      mid: "Semanas 4–8: Período de ajuste (especialmente quando há dose de reforço inicial de 6 semanas em bula).",
-      late: "Semanas 12+: Avaliação da concentração de vale e estabilização de longo prazo.",
+      'Cadeia éster alifática longa de 11 carbonos que confere meia-vida terminal de 21 a 34 dias, mantendo níveis fisiológicos estáveis por 10 a 14 semanas sem flutuações semanais.',
+    clinicalStudies:
+      '• Estudos Longitudinais (Saad et al., seguimento de até 8 anos): Esquema de 1.000 mg no Dia 0, dose de ataque na Semana 6 e manutenção a cada 10–14 semanas manteve testosterona estável dentro da faixa normal em >95% dos pacientes, reduzindo circunferência abdominal, HbA1c e triglicerídeos.',
+    timelineEffects: {
+      w1_2: 'Liberação lenta e progressiva; níveis plasmáticos sobem suavemente sem picos suprafisiológicos de estradiol.',
+      w4_8: 'Necessidade clínica de dose de reforço na Semana 6 para acelerar o alcance do platô terapêutico.',
+      w12_plus: 'Estado estacionário consolidado após a 3ª aplicação; alta estabilidade de humor, libido e massa magra.'
     },
+    sideEffects:
+      'Desconforto local pela injeção de 4 mL (deve ser injetada lentamente em 2 minutos para evitar microembolia oleosa pulmonar transitória/tosse), eritrocitose gradual e supressão de LH/FSH.',
+    contraindications:
+      'Carcinoma prostático/mamário andrógeno-dependente, tumores hepáticos prévios ou atuais, hematócrito > 54% e alergia ao óleo de rícino.',
+    labMonitoring:
+      'Testosterona sérica imediatamente antes da próxima injeção (vale), Hematócrito/Hemoglobina, PSA, Estradiol e perfil lipídico.'
   },
   {
-    id: "gel_testosterona",
-    name: "Testosterona Transdérmica (Gel)",
-    nicknames: ["Androgel"],
-    category: "Hormônios & Reposição (TRT)",
-    route: "Transdérmica diária",
-    halfLifeHours: 24,
-    intervalDays: 1,
-    defaultDoseMg: 50,
-    unit: "mg",
-    peakDays: 0.2,
-    steadyStateWeeks: 1,
-    potencyFactor: 0.75,
-    color: "#c084fc",
-    summary:
-      "Gel hidroalcoólico de aplicação tópica diária que forma reservatório no estrato córneo para absorção contínua ao longo de 24 horas.",
+    id: 'testosterona_gel',
+    category: 'hormonios',
+    categoryLabel: 'Hormônios & Reposição (TRT)',
+    name: 'Testosterona Transdérmica (Gel 1% / 1,62%)',
+    brandNames: '"Androgel"',
+    drugClass: 'Andrógeno Transdérmico de Liberação Contínua',
+    isIncretin: false,
+    isOral: false,
+    halfLifeHours: 16,
+    halfLifeDays: 0.67,
+    tmaxText: '2 a 6 horas após aplicação cutânea',
+    bioavailability: '~9% a 14% da dose aplicada atravessa o estrato córneo',
+    metabolismExcretion: 'Conversão cutânea parcial em DHT pela 5-alfa-redutase dérmica; metabolização hepática e excreção urinária.',
+    route: 'Tópica Diária (Ombros/Braços)',
+    defaultFreqDays: 1,
+    unit: 'mg',
+    standardDoses: [25, 50, 75, 100],
+    defaultDose: 50,
+    color: '#60a5fa',
+    indications:
+      'Reposição hormonal masculina no hipogonadismo com preferência por via não injetável e perfil circadiano fisiológico.',
     mechanism:
-      "Difunde-se pela pele até a circulação sistêmica sem passagem hepática de primeira passagem, reproduzindo perfil diário mais uniforme sem picos intensos de ésteres injetáveis.",
-    studies:
-      "Estudos controlados em hipogonadismo masculino mostram restauração de níveis séricos fisiológicos de testosterona, melhora de humor, energia e massa magra, com atenção à transferência secundária por contato cutâneo.",
-    sideEffects: [
-      "Irritação local na pele ou alteração de exames androgênicos",
-      "Risco de transferência cutânea acidental para parceiros(as) ou crianças se não lavar as mãos ou cobrir o local",
-    ],
-    contraindications: [
-      "Câncer de próstata ou mama masculino",
-      "Aplicação sobre pele lesionada ou contato direto sem proteção após aplicação",
-    ],
-    monitoring: ["Testosterona sérica (colhida conforme orientação temporal da bula)", "Hematócrito, PSA e perfil lipídico"],
-    timelines: {
-      early: "Semanas 1–2: Estabilização rápida do ritmo diário de aplicação.",
-      mid: "Semanas 4–8: Consolidação do perfil diário e revisão de adesão/absorção.",
-      late: "Semanas 12+: Reavaliação clínica e laboratorial completa.",
+      'O estrato córneo atua como reservatório cutâneo liberando testosterona continuamente na circulação ao longo de 24h, mimetizando o ritmo fisiológico sem picos suprafisiológicos de ésteres injetáveis.',
+    clinicalStudies:
+      '• Ensaios Clínicos (Swerdloff et al.): Aplicação diária de 50–100 mg normaliza testosterona sérica em >85% dos homens hipogonádicos já na primeira semana, apresentando menor taxa de eritrocitose comparado a ésteres intramusculares.',
+    timelineEffects: {
+      w1_2: 'Atingimento rápido de platô fisiológico estável em 2 a 3 dias de aplicação diária contínua.',
+      w4_8: 'Melhora sustentada de energia, função sexual e composição corporal com menor aromatização para estradiol.',
+      w12_plus: 'Manutenção fisiológica linear; maior conversão periférica relativa para DHT pela 5-alfa-redutase cutânea.'
     },
+    sideEffects:
+      'Irritação/eritema no local de aplicação, elevação de DHT (di-hidrotestosterona), risco de transferência secundária por contato pele a pele (mulheres/crianças) e elevação leve de PSA/hematócrito.',
+    contraindications:
+      'Câncer de próstata ou mama masculina, gestantes/crianças (risco de virilização por contato direto) e dermatites extensas na área de aplicação.',
+    labMonitoring:
+      'Testosterona total (2–4h após aplicação), DHT, Estradiol, Hematócrito e PSA.'
   },
+
+  // CATEGORIA 3: EIXO TIREOIDIANO
   {
-    id: "levotiroxina",
-    name: "Levotiroxina Sódica (T4)",
-    nicknames: ["Puran T4", "Euthyrox", "Synthroid"],
-    category: "Eixo Tireoidiano",
-    route: "VO diário em jejum",
+    id: 'levotiroxina',
+    category: 'tireoide',
+    categoryLabel: 'Eixo Tireoidiano',
+    name: 'Levotiroxina Sódica (T4)',
+    brandNames: '"Puran T4" / "Euthyrox" / "Synthroid"',
+    drugClass: 'Pró-Hormônio Tireoidiano Sintético (L-Tiroxina)',
+    isIncretin: false,
+    isOral: true,
     halfLifeHours: 168,
-    intervalDays: 1,
-    defaultDoseMg: 0.075,
-    unit: "mg",
-    peakDays: 0.2,
-    steadyStateWeeks: 6,
-    potencyFactor: 0.9,
-    color: "#2dd4bf",
-    summary:
-      "Hormônio tireoidiano sintético (T4) que atua como pró-hormônio periférico, convertido em triiodotironina (T3) ativa por desiodases.",
+    halfLifeDays: 7.0,
+    tmaxText: '2 a 4 horas (em jejum)',
+    bioavailability: '~60% a 80% (reduzida por alimentos, café, cálcio, ferro e IBP)',
+    metabolismExcretion: 'Desiodação periférica (fígado, rins, músculo) pelas desiodases D1/D2 em T3 ativo ou D3 em T3 reverso; conjugação hepática e excreção biliar.',
+    route: 'Oral Diária (Jejum 30–60 min)',
+    defaultFreqDays: 1,
+    unit: 'mcg',
+    standardDoses: [25, 50, 75, 88, 100, 125, 150],
+    defaultDose: 75,
+    color: '#fbbf24',
+    indications:
+      'Terapia de reposição ou suplementação hormonal no hipotireoidismo primário, secundário ou terciário, e supressão de TSH no carcinoma diferenciado de tireoide.',
     mechanism:
-      "Liga-se a receptores nucleares de hormônios tireoidianos (TR-alfa e TR-beta) após conversão periférica de T4 em T3, regulando taxa metabólica basal, expressão de receptores beta-adrenérgicos, síntese proteica e metabolismo lipídico/glicídico.",
-    studies:
-      "Em diretrizes de hipotireoidismo, a reposição com levotiroxina restaura o eutireoidismo clínico e laboratorial (TSH e T4 livre), exigindo cerca de 4 a 6 semanas após cada ajuste de dose para reavaliação do TSH.",
-    sideEffects: [
-      "Sinais de excesso/superdosagem: palpitações, taquicardia, ansiedade, insônia, tremor, sudorese ou perda ponderal não intencional",
-      "Atenção à absorção: ferro, cálcio, antiácidos, café ou refeições próximas podem reduzir a biodisponibilidade",
-    ],
-    contraindications: [
-      "Tireotoxicose não tratada, insuficiência adrenal não corrigida ou infarto agudo do miocárdio recente sem manejo adequado",
-    ],
-    monitoring: ["TSH e T4 livre (após 4–6 semanas de dose estável)", "Frequência cardíaca e sintomas adrenérgicos"],
-    timelines: {
-      early: "Semanas 1–2: Início do acúmulo de T4 (meia-vida ~7 dias); TSH ainda não reflete o estado estacionário completo.",
-      mid: "Semanas 4–8: Aproximação do equilíbrio de T4 e conversão periférica em T3; momento clássico para checar TSH/T4L.",
-      late: "Semanas 12+: Manutenção do eixo estável ou ajuste fino conforme resposta clínica e laboratorial.",
+      'Isômero levorrotatório sintético idêntico à tiroxina endógena. Circula >99% ligado a proteínas (TBG, transtirretina, albumina) e é convertido sob demanda tecidual em T3, que se liga aos receptores nucleares TR-alpha e TR-beta regulando taxa metabólica basal, termogênese, síntese proteica e receptores hepáticos de LDL.',
+    clinicalStudies:
+      '• Diretrizes ATA (American Thyroid Association) & SBEM: Dose plena de reposição estimada em ~1,6 mcg/kg/dia. Devido à meia-vida de 7 dias, alterações de dose requerem 4 a 6 semanas para atingir novo equilíbrio no eixo hipotálamo-hipófise-tireoide (TSH).',
+    timelineEffects: {
+      w1_2: 'Acúmulo plasmático gradual de T4 livre; sintomas clínicos ainda em transição lenta.',
+      w4_8: 'Atingimento do estado estacionário (steady-state em ~30–42 dias); janela correta para dosagem de TSH e T4 Livre.',
+      w12_plus: 'Normalização da taxa metabólica basal, depuração de colesterol LDL-C e resolução de fadiga/edema hipotireoideo.'
     },
+    sideEffects:
+      'Raros em dose eutireoidea; em superdosagem (tireotoxicose iatrogênica): palpitações, taquicardia, fibrilação atrial, tremores finos, ansiedade, insônia, sudorese e perda de densidade mineral óssea.',
+    contraindications:
+      'Tireotoxicose não tratada, infarto agudo do miocárdio recente, miocardite aguda e insuficiência adrenal não corrigida (risco de crise adrenal aguda).',
+    labMonitoring:
+      'TSH ultrasensível e T4 Livre após 4–6 semanas de cada ajuste de dose, e a cada 6–12 meses após estabilização.'
   },
   {
-    id: "liotironina",
-    name: "Liotironina Sódica (T3)",
-    nicknames: ["Cynomel"],
-    category: "Eixo Tireoidiano",
-    route: "VO diário (1 a 2 tomadas)",
+    id: 'liotironina',
+    category: 'tireoide',
+    categoryLabel: 'Eixo Tireoidiano',
+    name: 'Liotironina Sódica (T3)',
+    brandNames: '"Cynomel"',
+    drugClass: 'Hormônio Tireoidiano Biologicamente Ativo (L-Tri-iodotironina)',
+    isIncretin: false,
+    isOral: true,
     halfLifeHours: 24,
-    intervalDays: 1,
-    defaultDoseMg: 0.025,
-    unit: "mg",
-    peakDays: 0.15,
-    steadyStateWeeks: 1,
-    potencyFactor: 1.1,
-    color: "#f87171",
-    summary:
-      "Forma sintética do hormônio tireoidiano ativo T3, com início de ação mais rápido e meia-vida em torno de 24 horas.",
+    halfLifeDays: 1.0,
+    tmaxText: '2 a 4 horas',
+    bioavailability: '~95% (Absorção rápida e quase completa)',
+    metabolismExcretion: 'Desiodação sequencial hepática e renal em T2/T1 e conjugação com sulfato/glicuronídeo; excreção biliar e urinária.',
+    route: 'Oral (1 a 2x/dia)',
+    defaultFreqDays: 1,
+    unit: 'mcg',
+    standardDoses: [5, 10, 12.5, 25, 50],
+    defaultDose: 12.5,
+    color: '#f97316',
+    indications:
+      'Hipotireoidismo grave/coma mixedematoso, preparo para radioiodoterapia e terapia combinada selecionada (T4 + T3) sob supervisão endocrinológica rigorosa em pacientes com polimorfismos de desiodase (DIO2) sintomáticos.',
     mechanism:
-      "Exerce ação direta sobre receptores nucleares de hormônios tireoidianos sem depender de desiodação periférica prévia, elevando a atividade metabólica e o consumo energético celular.",
-    studies:
-      "Estudos clínicos avaliam a liotironina em cenários específicos de tireoidologia e terapia combinada T4+T3 em pacientes selecionados, destacando maior sensibilidade a oscilações de dose e efeitos cardiovasculares em comparação ao T4 isolado.",
-    sideEffects: [
-      "Taquicardia, palpitações, arritmias, nervosismo, insônia ou intolerância ao calor",
-      "Risco aumentado de catabolismo proteico e sobrecarga cardíaca se usado em doses excessivas",
-    ],
-    contraindications: [
-      "Tireotoxicose, insuficiência adrenal não tratada ou arritmias/cardiopatia isquêmica descompensada",
-    ],
-    monitoring: ["TSH, T4 livre e T3 livre", "Frequência cardíaca, pressão arterial e eletrocardiograma se indicado"],
-    timelines: {
-      early: "Semanas 1–2: Resposta metabólica e simpática rápida devido à meia-vida curta (~24h).",
-      mid: "Semanas 4–8: Avaliação de tolerância cardiovascular, sono e estabilidade energética.",
-      late: "Semanas 12+: Reavaliação médica periódica para evitar excesso tireoidiano subclínico.",
+      'Forma hormonal metabolicamente ativa com afinidade ~10 vezes maior pelos receptores nucleares tireoidianos que o T4. Eleva rapidamente o consumo de oxigênio mitocondrial, expressão de Na+/K+-ATPase, lipólise e frequência cardíaca.',
+    clinicalStudies:
+      '• Consensos ETA / ATA (Wiersinga et al.): Meia-vida curta (~24h) provoca picos séricos pós-dose e supressão rápida de TSH; quando indicado em terapia combinada com T4, recomenda-se fracionamento em 2 tomadas diárias para evitar picos cronotrópicos.',
+    timelineEffects: {
+      w1_2: 'Ação metabólica imediata (24–72h) e supressão rápida da secreção hipofisária de TSH.',
+      w4_8: 'Risco de catabolismo proteico muscular e balanço nitrogenado negativo se utilizado em doses suprafisiológicas.',
+      w12_plus: 'Exige vigilância rigorosa cardiovascular (risco de arritmia) e densidade mineral óssea.'
     },
+    sideEffects:
+      'Taquicardia, extrassístoles, fibrilação atrial, angina em coronariopatas, nervosismo, insônia, sudorese excessiva, diarreia e perda de massa muscular em doses excessivas.',
+    contraindications:
+      'Arritmias cardíacas, doença arterial coronariana não controlada, hipertireoidismo, insuficiência adrenal não tratada e gestação (não atravessa adequadamente a barreira placentária para o feto).',
+    labMonitoring:
+      'T3 Livre, T4 Livre, TSH, Eletrocardiograma (ECG), Frequência Cardíaca de Repouso e Pressão Arterial.'
+  },
+
+  // CATEGORIA 4: METABOLISMO GLICÍDICO, LIPÍDICO & CARDIOMETABÓLICO
+  {
+    id: 'metformina_xr',
+    category: 'cardiometabolico',
+    categoryLabel: 'Metabolismo Glicídico, Lipídico & Cardiometabólico',
+    name: 'Metformina (Liberação Prolongada / Imediata)',
+    brandNames: '"Glifage XR" / "Glifage"',
+    drugClass: 'Biguanida Sensibilizadora de Insulina (Ativadora de AMPK)',
+    isIncretin: false,
+    isOral: true,
+    halfLifeHours: 6.5,
+    halfLifeDays: 0.27,
+    tmaxText: '4 a 8 horas (XR) | 2 a 3 horas (IR)',
+    bioavailability: '~50% a 60% (Excreção renal inalterada via transportadores OCT2/MATE)',
+    metabolismExcretion: 'Não sofre metabolização hepática; excretada 100% inalterada pelos túbulos renais.',
+    route: 'Oral Diária (com refeição)',
+    defaultFreqDays: 1,
+    unit: 'mg',
+    standardDoses: [500, 850, 1000, 1500, 2000],
+    defaultDose: 1000,
+    color: '#34d399',
+    indications:
+      'Tratamento de primeira linha do Diabetes Mellitus tipo 2, prevenção de DM2 em pacientes com pré-diabetes/resistência insulínica e manejo metabólico na Síndrome dos Ovários Policísticos (SOP).',
+    mechanism:
+      'Inibe parcialmente o complexo I da cadeia respiratória mitocondrial hepática, elevando a razão AMP/ATP e ativando a quinase AMPK. Isso suprime a gliconeogênese hepática, aumenta a translocação de GLUT4 no músculo esquelético e eleva níveis endógenos do peptídeo anorexígeno GDF-15 e GLP-1 intestinal.',
+    clinicalStudies:
+      '• Estudo UKPDS: Redução de 36% na mortalidade por todas as causas e 39% no infarto do miocárdio em pacientes diabéticos com sobrepeso.\n• Diabetes Prevention Program (DPP, n=3.234): Redução de 31% na progressão de pré-diabetes para DM2 sem causar hipoglicemia ou ganho ponderal.',
+    timelineEffects: {
+      w1_2: 'Steady-state plasmático em 24–48h; fase inicial de adaptação da microbiota intestinal e trato gastrointestinal.',
+      w4_8: 'Redução consistente da glicemia de jejum (-20 a -40 mg/dL) e melhora da sensibilidade periférica à insulina.',
+      w12_plus: 'Efeito pleiotrópico endotelial consolidado; em uso > 1–2 anos, monitorar Vitamina B12 por redução da absorção ileal.'
+    },
+    sideEffects:
+      'Desconforto abdominal, fezes amolecidas, flatulência, gosto metálico (muito reduzidos na formulação XR); depleção de vitamina B12 a longo prazo; acidose lática (raríssima, associada a insuficiência renal grave).',
+    contraindications:
+      'Taxa de Filtração Glomerular (TFG) < 30 mL/min/1,73m², acidose metabólica aguda, insuficiência hepática grave, alcoolismo agudo e suspensão temporária antes de contraste iodado.',
+    labMonitoring:
+      'Creatinina sérica e TFG estimada (anual/semestral), HbA1c, Glicemia de jejum e dosagem anual de Vitamina B12.'
   },
   {
-    id: "metformina",
-    name: "Metformina (IR / XR)",
-    nicknames: ["Glifage", "Glifage XR"],
-    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
-    route: "VO diário (com refeições)",
-    halfLifeHours: 6,
-    intervalDays: 1,
-    defaultDoseMg: 850,
-    unit: "mg",
-    peakDays: 0.15,
-    steadyStateWeeks: 1,
-    potencyFactor: 0.72,
-    color: "#60a5fa",
-    summary:
-      "Biguanida de primeira linha no diabetes tipo 2 que reduz a produção hepática de glicose e melhora a sensibilidade periférica à insulina.",
+    id: 'inibidor_sglt2',
+    category: 'cardiometabolico',
+    categoryLabel: 'Metabolismo Glicídico, Lipídico & Cardiometabólico',
+    name: 'Empagliflozina / Dapagliflozina',
+    brandNames: '"Jardiance" / "Forxiga"',
+    drugClass: 'Inibidor Seletivo do Cotransportador Sódio-Glicose 2 (iSGLT2)',
+    isIncretin: false,
+    isOral: true,
+    halfLifeHours: 12.5,
+    halfLifeDays: 0.52,
+    tmaxText: '1,5 a 2 horas',
+    bioavailability: '~75% a 78%',
+    metabolismExcretion: 'Glicuronidação hepática via UGT1A9/UGT2B7 em metabólitos inativos; eliminação renal e fecal.',
+    route: 'Oral Diária (Manhã)',
+    defaultFreqDays: 1,
+    unit: 'mg',
+    standardDoses: [5, 10, 25],
+    defaultDose: 10,
+    color: '#10b981',
+    indications:
+      'Diabetes Mellitus tipo 2, Insuficiência Cardíaca (com fração de ejeção reduzida ou preservada) e Doença Renal Crônica (DRC) com albuminúria, independentemente da presença de diabetes.',
     mechanism:
-      "Atua principalmente no fígado reduzindo a gliconeogênese e a glicogenólise (via modulação energética mitocondrial/AMPK), além de melhorar a captação periférica de glicose e a ação intestinal.",
-    studies:
-      "Em estudos clássicos como o UKPDS, demonstrou redução consistente de complicações microvasculares e desfechos cardiovasculares em pacientes com diabetes tipo 2, com excelente perfil de segurança quando respeitada a função renal.",
-    sideEffects: [
-      "Desconforto gastrointestinal (gases, diarreia, náuseas) — mais comum na liberação imediata e reduzido com XR e ingestão junto às refeições",
-      "Redução gradual dos níveis de vitamina B12 com uso prolongado",
-    ],
-    contraindications: [
-      "Insuficiência renal grave (TFGe < 30 mL/min/1,73m²)",
-      "Acidose metabólica aguda ou cetoacidose diabética",
-    ],
-    monitoring: ["Função renal (TFGe / creatinina)", "HbA1c e glicemia", "Vitamina B12 em uso crônico"],
-    timelines: {
-      early: "Semanas 1–2: Adaptação gastrointestinal; uso com refeições e formulação XR costuma melhorar a tolerância.",
-      mid: "Semanas 4–8: Melhora progressiva do controle glicêmico e da sensibilidade insulínica.",
-      late: "Semanas 12+: Controle de HbA1c e acompanhamento anual de função renal e vitamina B12.",
+      'Inibe seletivamente o cotransportador SGLT2 no segmento S1 do túbulo contorcido proximal renal, bloqueando a reabsorção de ~90% da glicose filtrada e promovendo glicosúria terapêutica (~60–80 g glicose/dia = ~240–320 kcal/dia) e natriurese. Restaura o feedback tubuloglomerular, reduzindo a pressão intraglomerular e a hiperfiltração.',
+    clinicalStudies:
+      '• EMPA-REG OUTCOME (n=7.020): Redução de 38% na morte cardiovascular e 35% nas hospitalizações por insuficiência cardíaca.\n• DAPA-HF & EMPA-KIDNEY: Redução de ~28–37% na progressão da doença renal crônica ou morte renal.',
+    timelineEffects: {
+      w1_2: 'Início imediato da glicosúria e natriurese; queda discreta da pressão arterial sistólica (3–5 mmHg) e elevação leve do hematócrito por hemoconcentração benéfica.',
+      w4_8: 'Queda inicial esperada e reversível de 3–5 mL/min na TFG ("dip" hemodinâmico protetor glomerular) e perda ponderal de 1,5–2,5 kg.',
+      w12_plus: 'Nefroproteção e cardioproteção consolidadas com aumento da oxidação lipídica e cetogênese fisiológica leve (combustível miocárdico eficiente).'
     },
+    sideEffects:
+      'Infecções micóticas genitais (candidíase vulvovaginal ou balanite), poliúria, depleção volêmica/hipotensão ortostática em idosos e risco raro de cetoacidose diabética euglicêmica (especialmente em jejum prolongado ou dieta cetogênica estrita).',
+    contraindications:
+      'Diabetes tipo 1 (alto risco de cetoacidose euglicêmica), cetoacidose diabética, diálise e hipersensibilidade.',
+    labMonitoring:
+      'Creatinina/TFG, relação albumina/creatinina urinária, HbA1c, eletrólitos e orientação de higiene íntima e hidratação adequada.'
   },
   {
-    id: "sglt2",
-    name: "Empagliflozina / Dapagliflozina",
-    nicknames: ["Jardiance", "Forxiga"],
-    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
-    route: "VO 1x/dia",
-    halfLifeHours: 12,
-    intervalDays: 1,
-    defaultDoseMg: 10,
-    unit: "mg",
-    peakDays: 0.1,
-    steadyStateWeeks: 1,
-    potencyFactor: 0.78,
-    color: "#4ade80",
-    summary:
-      "Inibidores do cotransportador sódio-glicose 2 (SGLT2) no túbulo proximal renal, promovendo glicosúria e proteção cardiorrenal.",
-    mechanism:
-      "Bloqueiam a reabsorção renal de glicose e sódio via SGLT2, aumentando a excreção urinária de glicose (com leve perda calórica associada), reduzindo a pressão intraglomerular e modulando o equilíbrio hemodinâmico.",
-    studies:
-      "Nos ensaios EMPA-REG OUTCOME, DECLARE-TIMI 58, DAPA-HF e EMPEROR-Reduced, demonstraram redução de hospitalizações por insuficiência cardíaca, proteção renal progressiva e redução de risco cardiovascular.",
-    sideEffects: [
-      "Infecções fúngicas genitais e infecções do trato urinário",
-      "Depleção volêmica leve, hipotensão postural ou sede aumentada",
-      "Raro: cetoacidose euglicêmica em situações de estresse agudo, jejum prolongado ou restrição severa de carboidratos",
-    ],
-    contraindications: [
-      "Hipersensibilidade ao fármaco ou situações de risco elevado para cetoacidose sem manejo médico",
-    ],
-    monitoring: ["TFGe e eletrólitos", "Pressão arterial e hidratação", "Higiene íntima e sinais de infecção"],
-    timelines: {
-      early: "Semanas 1–2: Início da glicosúria e ajuste hemodinâmico/diurético leve.",
-      mid: "Semanas 4–8: Estabilização da TFGe inicial e melhora glicêmica/cardiorrenal.",
-      late: "Semanas 12+: Benefício protetor cardiorrenal e metabólico de médio/longo prazo.",
-    },
-  },
-  {
-    id: "estatina",
-    name: "Rosuvastatina / Atorvastatina",
-    nicknames: ["Crestor", "Lipitor"],
-    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
-    route: "VO 1x/dia",
+    id: 'estatina_alta_potencia',
+    category: 'cardiometabolico',
+    categoryLabel: 'Metabolismo Glicídico, Lipídico & Cardiometabólico',
+    name: 'Rosuvastatina / Atorvastatina',
+    brandNames: '"Crestor" / "Lipitor"',
+    drugClass: 'Inibidor Competitivo da HMG-CoA Redutase (Estatina de Alta Intensidade)',
+    isIncretin: false,
+    isOral: true,
     halfLifeHours: 19,
-    intervalDays: 1,
-    defaultDoseMg: 20,
-    unit: "mg",
-    peakDays: 0.2,
-    steadyStateWeeks: 1,
-    potencyFactor: 0.75,
-    color: "#facc15",
-    summary:
-      "Inibidores da HMG-CoA redutase (estatinas) que reduzem a síntese hepática de colesterol e aumentam a captação de LDL-colesterol.",
+    halfLifeDays: 0.79,
+    tmaxText: '3 a 5 horas (Rosuvastatina) | 1 a 2 horas (Atorvastatina)',
+    bioavailability: '~20% (Rosuvastatina) | ~14% (Atorvastatina) — alta captação seletiva hepática via OATP1B1',
+    metabolismExcretion: 'Rosuvastatina: excreção biliar/fecal 90% inalterada (mínima via CYP2C9). Atorvastatina: metabolização via CYP3A4 e excreção biliar.',
+    route: 'Oral Diária',
+    defaultFreqDays: 1,
+    unit: 'mg',
+    standardDoses: [5, 10, 20, 40],
+    defaultDose: 10,
+    color: '#38bdf8',
+    indications:
+      'Hipercolesterolemia primária, dislipidemia mista, hipertrigliceridemia e prevenção primária ou secundária de eventos cardiovasculares ateroscleróticos (infarto, AVC, revascularização).',
     mechanism:
-      "Inibem competitivamente a enzima limitante da biossíntese de colesterol no fígado, levando à maior expressão de receptores de LDL na superfície dos hepatócitos e queda acentuada do LDL circulante.",
-    studies:
-      "Extensa evidência clínica (incluindo JUPITER e metanálises CTT) comprova redução consistente de infarto, AVC e mortalidade cardiovascular proporcional à redução do LDL-colesterol.",
-    sideEffects: [
-      "Mialgia leve, dor articular, cefaleia ou elevação discreta de enzimas hepáticas em pequena parcela dos casos",
-      "Raro: miopatia significativa ou rabdomiólise (atenção a dor muscular difusa intensa e escurecimento urinário)",
-    ],
-    contraindications: [
-      "Doença hepática ativa não esclarecida, gestação e lactação",
-    ],
-    monitoring: ["Perfil lipídico (LDL, HDL, triglicerídeos)", "TGO/TGP e CK se houver sintomas musculares"],
-    timelines: {
-      early: "Semanas 1–2: Início rápido da queda do LDL-colesterol.",
-      mid: "Semanas 4–8: Queda expressiva e próximo do platô lipídico para reavaliação laboratorial.",
-      late: "Semanas 12+: Consolidação da redução de risco cardiovascular de longo prazo.",
+      'Inibe competitivamente a enzima limitante da biossíntese de colesterol no hepatócito (HMG-CoA redutase). A redução do colesterol intra-hepático ativa o fator SREBP-2, promovendo suprarregulação dos receptores de LDL (LDL-R) na membrana dos hepatócitos e acelerando a depuração plasmática de partículas aterogênicas ApoB.',
+    clinicalStudies:
+      '• Estudo JUPITER (n=17.802, Rosuvastatina 20 mg): Redução de 50% no LDL-C, 37% na PCR-us e 44% nos eventos cardiovasculares maiores.\n• Metanálises CTT (Cholesterol Treatment Trialists): Cada queda de 38,7 mg/dL (1 mmol/L) no LDL-C reduz em ~22% os eventos vasculares maiores em 5 anos.',
+    timelineEffects: {
+      w1_2: 'Inibição imediata da síntese hepática de colesterol; queda expressiva de LDL-C já detectável em 14 dias.',
+      w4_8: 'Atingimento da redução máxima de LDL-C (-45% a -55%), não-HDL-C e ApoB; estabilização da capa fibrosa de placas ateroscleróticas.',
+      w12_plus: 'Efeito pleiotrópico anti-inflamatório vascular (queda de PCR-us) e regressão de volume de ateroma em terapia de alta intensidade.'
     },
+    sideEffects:
+      'Mialgia benigna (5–10%), elevação assintomática transitória de transaminases (TGO/TGP), cefaleia, elevação discreta de HbA1c em pré-dispostos e rabdomiólise (raríssima, < 0,01%).',
+    contraindications:
+      'Doença hepática ativa ou elevação persistente inexplicada de transaminases > 3x LSN, gestação, lactação e miopatia grave ativa.',
+    labMonitoring:
+      'Perfil lipídico completo (Colesterol Total, LDL-C, HDL-C, Triglicerídeos, ApoB), TGO/TGP e CPK (se sintomas musculares).'
   },
   {
-    id: "orlistate",
-    name: "Orlistate",
-    nicknames: ["Xenical"],
-    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
-    route: "VO até 3x/dia às refeições com gordura",
+    id: 'orlistate',
+    category: 'cardiometabolico',
+    categoryLabel: 'Metabolismo Glicídico, Lipídico & Cardiometabólico',
+    name: 'Orlistate',
+    brandNames: '"Xenical"',
+    drugClass: 'Inibidor Reversível das Lipases Gástrica e Pancreática',
+    isIncretin: false,
+    isOral: true,
     halfLifeHours: 2,
-    intervalDays: 1,
-    defaultDoseMg: 120,
-    unit: "mg",
-    peakDays: 0.1,
-    steadyStateWeeks: 1,
-    potencyFactor: 0.65,
-    color: "#e879f9",
-    summary:
-      "Inibidor seletivo e reversível das lipases gastrointestinais que reduz em cerca de ~30% a absorção da gordura dietética no trato digestivo.",
+    halfLifeDays: 0.08,
+    tmaxText: 'Ação local intraluminal imediata durante a digestão',
+    bioavailability: '< 1% (Absorção sistêmica desprezível; ação estritamente gastrointestinal)',
+    metabolismExcretion: '97% excretado nas fezes (83% como fármaco inalterado).',
+    route: 'Oral (3x/dia junto às refeições com gordura)',
+    defaultFreqDays: 0.33,
+    unit: 'mg',
+    standardDoses: [60, 120],
+    defaultDose: 120,
+    color: '#94a3b8',
+    indications:
+      'Tratamento adjuvante da obesidade e sobrepeso associado a dislipidemia, hipertensão ou pré-diabetes em conjunto com dieta hipocalórica.',
     mechanism:
-      "Liga-se covalentemente ao sítio ativo das lipases gástrica e pancreática no lúmen intestinal, impedindo a hidrólise de triglicerídeos em ácidos graxos absorvíveis e aumentando sua eliminação nas fezes.",
-    studies:
-      "No estudo XENDOS (4 anos), associado a mudanças de estilo de vida, reduziu a incidência de diabetes tipo 2 e promoveu maior perda de peso sustentada em relação ao placebo.",
-    sideEffects: [
-      "Esteatorreia (fezes oleosas), flatulência com descarga oleosa, urgência fecal — diretamente proporcionais ao teor de gordura da refeição",
-      "Redução potencial da absorção de vitaminas lipossolúveis (A, D, E, K) se não houver separação/suplementação adequada",
-    ],
-    contraindications: [
-      "Síndrome de má absorção crônica, colestase, gestação ou lactação",
-    ],
-    monitoring: ["Aderência dietética ao teor de gordura por refeição", "Vitaminas lipossolúveis em uso prolongado"],
-    timelines: {
-      early: "Semanas 1–2: Efeito luminal imediato a cada refeição com gordura; resposta GI reflete o consumo lipídico.",
-      mid: "Semanas 4–8: Ajuste alimentar prático para evitar desconfortos intestinais.",
-      late: "Semanas 12+: Avaliação da perda ponderal acumulada e estado nutricional.",
+      'Liga-se covalentemente ao resíduo ativo de serina das lipases gástrica e pancreática no lúmen do estômago e intestino delgado, impedindo a hidrólise de triglicerídeos em ácidos graxos livres e monoglicerídeos absorvíveis, bloqueando ~30% da absorção da gordura dietética.',
+    clinicalStudies:
+      '• Estudo XENDOS (n=3.305, duração de 4 anos): Perda ponderal significativamente superior ao placebo associado à mudança de estilo de vida, com redução adicional de 37% no risco de progressão para diabetes tipo 2 e queda independente de LDL-C.',
+    timelineEffects: {
+      w1_2: 'Bloqueio imediato de ~30% dos triglicerídeos ingeridos; atua também como biofeedback educativo contra refeições hiperlipídicas.',
+      w4_8: 'Redução progressiva de absorção calórica lipídica e queda adicional de colesterol LDL por menor incorporação micelar.',
+      w12_plus: 'Potencial redução nos níveis séricos de vitaminas lipossolúveis (A, D, E, K) se não suplementadas em horário afastado.'
     },
-  },
+    sideEffects:
+      'Esteatorreia (fezes oleosas), urgência fecal, flatulência com descarga oleosa (proporcional ao teor de gordura da refeição) e redução da absorção de vitaminas lipossolúveis (A, D, E, K).',
+    contraindications:
+      'Síndrome de má absorção crônica, colestase, gestação/lactação e uso concomitante com ciclosporina (reduz absorção do imunossupressor).',
+    labMonitoring:
+      '25-OH-Vitamina D, perfil lipídico e função hepática; administrar polivitamínico lipossolúvel ao menos 2 horas antes ou depois do Orlistate.'
+  }
 ];
 
+// ============================================================================
+// 2. BASE DE DADOS ANATÔMICA DO ADIPÔMETRO (PREGAS CUTÂNEAS)
+// ============================================================================
 const SKINFOLD_SITES = {
   peitoral: {
-    id: "peitoral",
-    label: "Peitoral / Peito",
-    view: "frontal",
-    x: 42,
-    y: 33,
-    protocol: "JP3 Masculino · JP7",
-    angle: "Diagonal (ao longo da linha da axila ao mamilo)",
+    id: 'peitoral',
+    name: 'Peitoral (Torácica)',
+    view: 'front',
+    x: 112,
+    y: 124,
+    direction: 'Diagonal (acompanhando o eixo longitudinal do músculo peitoral maior)',
     location:
-      "Na metade da distância entre a linha axilar anterior e o mamilo (no homem, ligeiramente acima; na mulher, no terço superior externo).",
-    pinchGuide:
-      "Pinçar com polegar e indicador a ~1 cm acima do ponto marcado, mantendo a prega inclinada na direção do mamilo e aplicando o adipômetro a ~1 cm de distância dos dedos.",
-    commonMistake: "Puxar tecido mamário profundo ou medir na vertical em vez da diagonal.",
-  },
-  abdomen: {
-    id: "abdomen",
-    label: "Abdômen",
-    view: "frontal",
-    x: 46,
-    y: 47,
-    protocol: "JP3 Masculino · JP3 Feminino · JP7",
-    angle: "Vertical ou Horizontal (conforme protocolo)",
-    location:
-      "A cerca de 2 cm (1 polegada) à direita da cicatriz umbilical, na altura do umbigo.",
-    pinchGuide:
-      "Pinçar a prega abdominal com firmeza, esperar 1 a 2 segundos para estabilização do ponteiro/visor e fazer a leitura sem soltar a pinça.",
-    commonMistake: "Medir muito próximo ao umbigo (onde há cicatriz/tensão) ou sobre contração abdominal.",
-  },
-  coxa: {
-    id: "coxa",
-    label: "Coxa Anterior",
-    view: "frontal",
-    x: 43,
-    y: 66,
-    protocol: "JP3 Masculino · JP3 Feminino · JP7",
-    angle: "Longitudinal (ao longo do eixo da coxa)",
-    location:
-      "Na linha média anterior da coxa, exatamente no ponto médio entre a prega inguinal e a borda superior da patela.",
-    pinchGuide:
-      "Com o peso corporal apoiado na perna oposta e joelho relaxado, levantar a prega longitudinalmente e aplicar o adipômetro no ponto médio.",
-    commonMistake: "Medir com o quadríceps contraído ou apoiar o peso na perna avaliada.",
-  },
-  triceps: {
-    id: "triceps",
-    label: "Tríceps",
-    view: "dorsal",
-    x: 34,
-    y: 35,
-    protocol: "JP3 Feminino · JP7",
-    angle: "Vertical (ao longo do eixo posterior do braço)",
-    location:
-      "Na face posterior do braço, no ponto médio exato entre o processo acromial (ombro) e o olécrano (cotovelo), com braço relaxado ao lado do corpo.",
-    pinchGuide:
-      "Pinçar verticalmente a dobra cutânea na parte posterior do braço, mantendo o cotovelo estendido e relaxado.",
-    commonMistake: "Deslocar para a face lateral ou posterior-interna do braço.",
-  },
-  subescapular: {
-    id: "subescapular",
-    label: "Subescapular",
-    view: "dorsal",
-    x: 43,
-    y: 36,
-    protocol: "JP7",
-    angle: "Diagonal (~45° seguindo as linhas naturais de clivagem da pele)",
-    location:
-      "1 a 2 cm abaixo do ângulo inferior da escápula (ponta inferior da omoplata), com o ombro e braço relaxados.",
-    pinchGuide:
-      "Acompanhar a inclinação natural descendente e lateral (cerca de 45°), pinçando a prega e aplicando o compasso logo abaixo dos dedos.",
-    commonMistake: "Pedir para elevar o braço alto e puxar a escápula para fora do lugar durante a leitura.",
+      'Homens: ponto médio exato entre a linha axilar anterior e o mamilo. Mulheres (JP7): um terço da distância entre a linha axilar anterior e o mamilo.',
+    technique:
+      'Com o avaliado em pé e braços relaxados ao longo do corpo, destaque a dobra cutânea com polegar e indicador da mão esquerda 1 cm acima do ponto marcado e posicione as hastes do adipômetro perpendicularmente à dobra. Realize a leitura em 2 segundos.',
+    commonErrors:
+      'Pinçar tecido glandular mamário ou posicionar a prega na horizontal em vez de diagonal.'
   },
   axilar_media: {
-    id: "axilar_media",
-    label: "Axilar Média",
-    view: "frontal",
-    x: 35,
-    y: 38,
-    protocol: "JP7",
-    angle: "Vertical",
+    id: 'axilar_media',
+    name: 'Axilar Média',
+    view: 'front',
+    x: 84,
+    y: 162,
+    direction: 'Vertical (ou levemente oblíqua seguindo o arco costal)',
     location:
-      "Na linha axilar média, na altura do apêndice xifoide (final do esterno), com o braço levemente abduzido para facilitar o acesso.",
-    pinchGuide:
-      "Pinçar verticalmente na linha média da axila na altura do xifoide e ler após 1–2 segundos.",
-    commonMistake: "Subir demais para o cavo axilar ou ir muito para trás (linha escapular).",
+      'Intersecção da linha axilar média (descendo verticalmente do centro da fossa axilar) com uma linha horizontal traçada na altura da junção xifoesternal (processo xifoide).',
+    technique:
+      'Peça ao avaliado para abduzir levemente o braço direito (ou apoiar a mão sobre o ombro oposto sem contrair o serrátil). Destaque a dobra verticalmente na linha axilar média e aplique o adipômetro.',
+    commonErrors:
+      'Deslocar o ponto muito anteriormente (aproximando do peitoral) ou muito posteriormente (próximo ao latíssimo do dorso).'
   },
-  suprailiaca: {
-    id: "suprailiaca",
-    label: "Suprailíaca",
-    view: "dorsal",
-    x: 38,
-    y: 46,
-    protocol: "JP3 Feminino · JP7",
-    angle: "Diagonal (acompanhando a crista ilíaca anterior/lateral)",
+  abdominal: {
+    id: 'abdominal',
+    name: 'Abdominal',
+    view: 'front',
+    x: 118,
+    y: 206,
+    direction: 'Vertical (paralela ao eixo longitudinal do corpo)',
     location:
-      "Logo acima da crista ilíaca, na linha axilar anterior/média, seguindo a inclinação natural da crista.",
-    pinchGuide:
-      "Pinçar a dobra diagonalmente logo acima da borda superior do osso ilíaco e aplicar o adipômetro sem inclinar o aparelho.",
-    commonMistake: "Confundir com a prega abdominal lateral ou comprimir excessivamente a pele.",
+      'A 2 cm (ou 3 cm conforme padronização) lateralmente à direita da cicatriz umbilical, na mesma linha horizontal do umbigo.',
+    technique:
+      'Com a musculatura abdominal relaxada e respiração normal, destaque a prega verticalmente. Evite aprofundar demais os dedos para não pinçar a fáscia do reto abdominal.',
+    commonErrors:
+      'Pinçar longe demais do umbigo ou solicitar contração abdominal durante a medição.'
   },
+  supra_iliaca: {
+    id: 'supra_iliaca',
+    name: 'Supra-ilíaca (Crista Ilíaca)',
+    view: 'front',
+    x: 87,
+    y: 222,
+    direction: 'Oblíqua / Diagonal (acompanhando o ângulo natural da crista ilíaca, ~45°)',
+    location:
+      'Imediatamente superior à crista ilíaca, na intersecção com a linha axilar anterior (logo acima da borda superior do osso ilíaco).',
+    technique:
+      'Palpe a crista ilíaca superior, marque 1–2 cm acima dela na linha axilar anterior e destaque a dobra obliquamente para baixo e medialmente.',
+    commonErrors:
+      'Confundir a dobra supra-ilíaca (linha axilar anterior) com a dobra supra-espinal ou pinçar na vertical.'
+  },
+  coxa: {
+    id: 'coxa',
+    name: 'Coxa Medial (Anterior)',
+    view: 'front',
+    x: 112,
+    y: 306,
+    direction: 'Vertical (paralela ao eixo longitudinal do fêmur)',
+    location:
+      'Face anterior da coxa direita, no ponto médio exato entre a prega inguinal (ligamento inguinal) e a borda proximal (superior) da patela.',
+    technique:
+      'O avaliado deve transferir o peso corporal para a perna esquerda, mantendo a perna direita relaxada com leve flexão de joelho. Se a dobra for muito firme, peça ao avaliado para sustentar a parte posterior da coxa com ambas as mãos.',
+    commonErrors:
+      'Medir com o quadríceps contraído ou medir próximo demais ao joelho.'
+  },
+  triceps: {
+    id: 'triceps',
+    name: 'Tricipital (Tríceps)',
+    view: 'back',
+    x: 186,
+    y: 162,
+    direction: 'Vertical (paralela ao eixo longitudinal do úmero)',
+    location:
+      'Face posterior do braço direito, no ponto médio exato entre o processo acromial da escápula (acrômio) e o processo do olécrano da ulna (cotovelo), medido com o cotovelo flexionado a 90° e depois relaxado.',
+    technique:
+      'Com o braço relaxado e estendido ao lado do tronco (palma voltada para a coxa), destaque a prega verticalmente na linha média posterior do braço, separando-a do ventre muscular do tríceps braquial.',
+    commonErrors:
+      'Não medir o ponto médio com fita métrica (olhômetro tende a errar para cima) ou pinçar o músculo tríceps junto.'
+  },
+  subescapular: {
+    id: 'subescapular',
+    name: 'Subescapular',
+    view: 'back',
+    x: 146,
+    y: 150,
+    direction: 'Diagonal (~45° para baixo e lateralmente, seguindo a borda medial da escápula)',
+    location:
+      '1 a 2 cm abaixo do ângulo inferior da escápula direita.',
+    technique:
+      'Caso o ângulo inferior da escápula não esteja visível, peça ao avaliado para colocar o braço direito atrás das costas para destacar a escápula, marque o ponto e retorne o braço à posição relaxada antes de pinçar.',
+    commonErrors:
+      'Pinçar na vertical em vez de seguir a angulação natural de 45° das linhas de clivagem da pele.'
+  }
 };
 
-function calculateBodyFatFromFolds({ protocol, sex, age, folds }) {
-  const n = (k) => Math.max(0, Number(folds?.[k]) || 0);
-  let sum = 0;
-  let bodyDensity = 1.05;
-  const safeAge = Number(age) || 30;
+const SKINFOLD_PROTOCOLS = {
+  jp3_male: {
+    id: 'jp3_male',
+    name: 'Jackson & Pollock — 3 Dobras (Masculino)',
+    sex: 'male',
+    sites: ['peitoral', 'abdominal', 'coxa'],
+    description: 'Padrão-ouro clínico rápido para homens adultos (Peitoral + Abdominal + Coxa).'
+  },
+  jp3_female: {
+    id: 'jp3_female',
+    name: 'Jackson & Pollock — 3 Dobras (Feminino)',
+    sex: 'female',
+    sites: ['triceps', 'supra_iliaca', 'coxa'],
+    description: 'Padrão-ouro clínico rápido para mulheres adultas (Tríceps + Supra-ilíaca + Coxa).'
+  },
+  jp7_all: {
+    id: 'jp7_all',
+    name: 'Jackson & Pollock — 7 Dobras (Completo)',
+    sex: 'both',
+    sites: ['peitoral', 'axilar_media', 'triceps', 'subescapular', 'abdominal', 'supra_iliaca', 'coxa'],
+    description:
+      'Avaliação antropométrica completa de 7 sítios (Peitoral, Axilar Média, Tríceps, Subescapular, Abdominal, Supra-ilíaca e Coxa).'
+  }
+};
 
-  if (protocol === "jp3") {
-    if (sex === "male") {
-      sum = n("peitoral") + n("abdomen") + n("coxa");
-      bodyDensity =
-        1.10938 -
-        0.0008267 * sum +
-        0.0000016 * sum * sum -
-        0.0002574 * safeAge;
-    } else {
-      sum = n("triceps") + n("suprailiaca") + n("coxa");
-      bodyDensity =
-        1.0994921 -
-        0.0009929 * sum +
-        0.0000023 * sum * sum -
-        0.0001392 * safeAge;
-    }
+function calculateSkinfoldResults({ protocolId, sex, age, weightKg, folds }) {
+  const proto = SKINFOLD_PROTOCOLS[protocolId] || SKINFOLD_PROTOCOLS.jp3_male;
+  const safeAge = Math.max(15, Math.min(90, Number(age) || 30));
+  const safeWeight = Math.max(30, Number(weightKg) || 80);
+
+  const sum = proto.sites.reduce((acc, siteKey) => acc + Math.max(0, Number(folds[siteKey]) || 0), 0);
+  const allFilled = proto.sites.every((siteKey) => Number(folds[siteKey]) > 0);
+
+  if (!allFilled || sum <= 0) {
+    return {
+      isValid: false,
+      sum: Number(sum.toFixed(1)),
+      density: null,
+      bodyFatPct: null,
+      fatMassKg: null,
+      leanMassKg: null,
+      classification: 'Preencha todas as dobras do protocolo'
+    };
+  }
+
+  let density = 1.08;
+  if (protocolId === 'jp3_male') {
+    density =
+      1.10938 -
+      0.0008267 * sum +
+      0.0000016 * (sum * sum) -
+      0.0002574 * safeAge;
+  } else if (protocolId === 'jp3_female') {
+    density =
+      1.0994921 -
+      0.0009929 * sum +
+      0.0000023 * (sum * sum) -
+      0.0001392 * safeAge;
   } else {
-    sum =
-      n("peitoral") +
-      n("axilar_media") +
-      n("triceps") +
-      n("subescapular") +
-      n("abdomen") +
-      n("suprailiaca") +
-      n("coxa");
-    if (sex === "male") {
-      bodyDensity =
-        1.112 -
-        0.00043499 * sum +
-        0.00000055 * sum * sum -
-        0.00028826 * safeAge;
-    } else {
-      bodyDensity =
+    if (sex === 'female') {
+      density =
         1.097 -
         0.00046971 * sum +
-        0.00000056 * sum * sum -
+        0.00000056 * (sum * sum) -
         0.00012828 * safeAge;
+    } else {
+      density =
+        1.112 -
+        0.00043499 * sum +
+        0.00000055 * (sum * sum) -
+        0.00028826 * safeAge;
     }
   }
 
-  const clampedDensity = Math.max(0.98, Math.min(1.15, bodyDensity));
-  const bodyFatPct = Math.max(3, Math.min(55, 495 / clampedDensity - 450));
+  // Equação de Siri (1961)
+  const rawBf = (4.95 / Math.max(0.95, density) - 4.5) * 100;
+  const bodyFatPct = Number(Math.max(3.0, Math.min(55.0, rawBf)).toFixed(1));
+  const fatMassKg = Number(((safeWeight * bodyFatPct) / 100).toFixed(1));
+  const leanMassKg = Number((safeWeight - fatMassKg).toFixed(1));
+
+  let classification = 'Adequado / Eutrófico';
+  if (sex === 'male') {
+    if (bodyFatPct < 6) classification = 'Gordura Essencial (Muito Baixo)';
+    else if (bodyFatPct <= 13) classification = 'Atlético / Excelente';
+    else if (bodyFatPct <= 17) classification = 'Bom / Boa Forma';
+    else if (bodyFatPct <= 24) classification = 'Média Populacional / Aceitável';
+    else classification = 'Elevado / Sobrepeso Adiposo';
+  } else {
+    if (bodyFatPct < 14) classification = 'Gordura Essencial (Muito Baixo)';
+    else if (bodyFatPct <= 20) classification = 'Atlético / Excelente';
+    else if (bodyFatPct <= 24) classification = 'Bom / Boa Forma';
+    else if (bodyFatPct <= 31) classification = 'Média Populacional / Aceitável';
+    else classification = 'Elevado / Sobrepeso Adiposo';
+  }
 
   return {
-    sumMm: Number(sum.toFixed(1)),
-    density: Number(clampedDensity.toFixed(4)),
-    bodyFatPct: Number(bodyFatPct.toFixed(1)),
+    isValid: true,
+    sum: Number(sum.toFixed(1)),
+    density: Number(density.toFixed(4)),
+    bodyFatPct,
+    fatMassKg,
+    leanMassKg,
+    classification
   };
 }
 
-function simulateConcentrationAtDay(drug, doseMg, intervalDays, day) {
-  const halfLifeDays = Math.max(0.08, (drug.halfLifeHours || 24) / 24);
-  const k = Math.LN2 / halfLifeDays;
-  const interval = Math.max(1, Number(intervalDays) || drug.intervalDays || 7);
-  const dose = Math.max(0, Number(doseMg) || drug.defaultDoseMg || 1);
-  const peak = Math.max(0.05, Number(drug.peakDays) || 1);
+// ============================================================================
+// 3. BASE NUTRICIONAL EXPANDIDA & CICLO CALÓRICO
+// ============================================================================
+const FOOD_DATABASE = [
+  { id: 'arroz_branco', name: 'Arroz Branco Cozido', group: 'carbs', kcal: 128, protein: 2.5, carbs: 28.1, fat: 0.2 },
+  { id: 'arroz_integral', name: 'Arroz Integral Cozido', group: 'carbs', kcal: 124, protein: 2.6, carbs: 25.8, fat: 1.0 },
+  { id: 'batata_doce', name: 'Batata Doce Cozida', group: 'carbs', kcal: 77, protein: 0.6, carbs: 18.4, fat: 0.1 },
+  { id: 'batata_inglesa', name: 'Batata Inglesa Cozida', group: 'carbs', kcal: 52, protein: 1.2, carbs: 11.9, fat: 0.1 },
+  { id: 'mandioca', name: 'Mandioca / Aipim Cozido', group: 'carbs', kcal: 125, protein: 0.6, carbs: 30.1, fat: 0.3 },
+  { id: 'macarrao', name: 'Macarrão Cozido', group: 'carbs', kcal: 157, protein: 5.8, carbs: 30.9, fat: 0.9 },
+  { id: 'aveia', name: 'Aveia em Flocos', group: 'carbs', kcal: 394, protein: 13.9, carbs: 66.6, fat: 8.5 },
+  { id: 'pao_integral', name: 'Pão Integral', group: 'carbs', kcal: 253, protein: 9.4, carbs: 49.9, fat: 3.7 },
+  { id: 'torrada_integral', name: 'Torrada Integral', group: 'carbs', kcal: 375, protein: 12.0, carbs: 68.0, fat: 5.5 },
+  { id: 'tapioca', name: 'Goma de Tapioca Hidratada', group: 'carbs', kcal: 240, protein: 0.0, carbs: 60.0, fat: 0.0 },
+  { id: 'banana', name: 'Banana Prata / Nanica', group: 'carbs', kcal: 92, protein: 1.3, carbs: 23.8, fat: 0.1 },
+  { id: 'maca', name: 'Maçã Fuji com Casca', group: 'carbs', kcal: 56, protein: 0.3, carbs: 15.2, fat: 0.0 },
+  { id: 'doce_leite', name: 'Doce de Leite Pastoso', group: 'carbs', kcal: 306, protein: 5.5, carbs: 59.5, fat: 5.2 },
+  { id: 'mel', name: 'Mel de Abelha', group: 'carbs', kcal: 309, protein: 0.0, carbs: 84.0, fat: 0.0 },
 
-  let total = 0;
-  for (let t0 = 0; t0 <= day; t0 += interval) {
-    const dt = day - t0;
-    const elimination = Math.exp(-k * dt);
-    const absorptionRamp = 1 - Math.exp(-dt / peak);
-    total += dose * absorptionRamp * elimination;
-  }
+  { id: 'frango', name: 'Peito de Frango Grelhado', group: 'protein', kcal: 159, protein: 32.0, carbs: 0.0, fat: 2.5 },
+  { id: 'patinho', name: 'Patinho Bovino Moído/Grelhado', group: 'protein', kcal: 219, protein: 35.9, carbs: 0.0, fat: 7.3 },
+  { id: 'tilapia', name: 'Filé de Tilápia Grelhado', group: 'protein', kcal: 128, protein: 26.2, carbs: 0.0, fat: 2.7 },
+  { id: 'salmao', name: 'Salmão Grelhado', group: 'protein', kcal: 243, protein: 26.1, carbs: 0.0, fat: 14.6 },
+  { id: 'ovos', name: 'Ovo Inteiro Cozido/Mexido', group: 'protein', kcal: 146, protein: 13.3, carbs: 0.6, fat: 9.5 },
+  { id: 'clara_ovo', name: 'Clara de Ovo Pasteurizada/Cozida', group: 'protein', kcal: 52, protein: 10.9, carbs: 0.7, fat: 0.2 },
+  { id: 'whey', name: 'Whey Protein Concentrado (80%)', group: 'protein', kcal: 400, protein: 80.0, carbs: 8.0, fat: 5.0 },
+  { id: 'iogurte_natural', name: 'Iogurte Natural Integral/Desnatado', group: 'protein', kcal: 61, protein: 4.5, carbs: 5.5, fat: 2.2 },
+  { id: 'queijo_minas', name: 'Queijo Minas Frescal', group: 'protein', kcal: 264, protein: 17.4, carbs: 3.2, fat: 20.2 },
+  { id: 'queijo_mussarela', name: 'Queijo Mussarela', group: 'protein', kcal: 330, protein: 22.6, carbs: 3.0, fat: 25.2 },
+  { id: 'queijo_cottage', name: 'Queijo Cottage', group: 'protein', kcal: 98, protein: 11.1, carbs: 3.4, fat: 4.3 },
 
-  const maxSingleDosePeak = dose * (1 - Math.exp(-peak / peak)) * Math.exp(-k * peak);
-  const normalizedLevel = maxSingleDosePeak > 0 ? (total / maxSingleDosePeak) * 50 : 0;
-  return Math.min(100, Number(normalizedLevel.toFixed(1)));
-}
-
-const INITIAL_PROFILES = [
-  {
-    id: "p1",
-    name: "Perfil Clínico Principal",
-    sex: "male",
-    age: 32,
-    heightCm: 178,
-    weightKg: 82.4,
-    targetWeightKg: 78.0,
-    activityMultiplier: 1.55,
-    goalMode: "recomp",
-    refeedDays: [3, 6],
-    refeedDeltaKcal: 450,
-    macrosSplit: { pPerKg: 2.2, gPerKg: 0.8 },
-    measurements: {
-      neck: 39,
-      chest: 102,
-      waist: 81,
-      abdomen: 84,
-      hips: 97,
-      rightArm: 37.5,
-      rightThigh: 59,
-      calf: 37,
-    },
-    caliper: {
-      protocol: "jp3",
-      folds: {
-        peitoral: 9,
-        abdomen: 17,
-        coxa: 12,
-        triceps: 8,
-        subescapular: 12,
-        axilar_media: 10,
-        suprailiaca: 13,
-      },
-      lastBodyFatPct: 14.2,
-      lastDensity: 1.0661,
-      lastSumMm: 38,
-    },
-    history: [
-      { id: "h1", date: "2026-10-20", weightKg: 84.2, bodyFatPct: 15.8, leanKg: 70.9, waistCm: 83.5, note: "Avaliação inicial" },
-      { id: "h2", date: "2026-11-03", weightKg: 83.3, bodyFatPct: 14.9, leanKg: 70.9, waistCm: 82.2, note: "Ajuste proteico e treino" },
-      { id: "h3", date: "2026-11-17", weightKg: 82.4, bodyFatPct: 14.2, leanKg: 70.7, waistCm: 81.0, note: "Leitura adipômetro sincronizada" },
-    ],
-    mealPlan: [
-      { id: "m1", title: "Café da Manhã", items: [{ foodId: "f2", grams: 150 }, { foodId: "f13", grams: 40 }, { foodId: "f7", grams: 170 }] },
-      { id: "m2", title: "Almoço", items: [{ foodId: "f1", grams: 160 }, { foodId: "f11", grams: 180 }, { foodId: "f17", grams: 10 }] },
-      { id: "m3", title: "Lanche / Pré-Treino", items: [{ foodId: "f6", grams: 30 }, { foodId: "f14", grams: 80 }, { foodId: "f15", grams: 20 }] },
-      { id: "m4", title: "Jantar", items: [{ foodId: "f5", grams: 170 }, { foodId: "f10", grams: 200 }, { foodId: "f16", grams: 20 }] },
-    ],
-    activeDrugs: [
-      {
-        uid: "d1",
-        drugId: "semaglutida",
-        doseMg: 0.5,
-        intervalDays: 7,
-        startDayOffset: 0,
-        enabled: true,
-      },
-    ],
-  },
+  { id: 'azeite', name: 'Azeite de Oliva Extra Virgem', group: 'fat', kcal: 884, protein: 0.0, carbs: 0.0, fat: 100.0 },
+  { id: 'amendoim', name: 'Amendoim Torrado sem Pele', group: 'fat', kcal: 567, protein: 25.8, carbs: 16.1, fat: 49.2 },
+  { id: 'pasta_amendoim', name: 'Pasta de Amendoim Integral', group: 'fat', kcal: 588, protein: 25.0, carbs: 20.0, fat: 50.0 },
+  { id: 'castanha_para', name: 'Castanha-do-Pará', group: 'fat', kcal: 643, protein: 14.5, carbs: 15.1, fat: 63.5 },
+  { id: 'abacate', name: 'Abacate Fresco', group: 'fat', kcal: 96, protein: 1.2, carbs: 6.0, fat: 8.4 },
+  { id: 'manteiga', name: 'Manteiga sem Sal', group: 'fat', kcal: 726, protein: 0.4, carbs: 0.0, fat: 82.4 }
 ];
 
-function loadSavedState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
+const WEEK_DAYS = [
+  { id: 'seg', short: 'Seg', label: 'Segunda-feira' },
+  { id: 'ter', short: 'Ter', label: 'Terça-feira' },
+  { id: 'qua', short: 'Qua', label: 'Quarta-feira' },
+  { id: 'qui', short: 'Qui', label: 'Quinta-feira' },
+  { id: 'sex', short: 'Sex', label: 'Sexta-feira' },
+  { id: 'sab', short: 'Sáb', label: 'Sábado' },
+  { id: 'dom', short: 'Dom', label: 'Domingo' }
+];
+
+const DAY_TYPE_CONFIG = {
+  rest: { label: 'Low Carb / Descanso', carbsGKg: 1.4, color: '#38bdf8', bg: 'bg-sky-500/15 text-sky-300 border-sky-400/30' },
+  moderate: { label: 'Treino Moderado', carbsGKg: 2.5, color: '#14b8a6', bg: 'bg-teal-500/15 text-teal-300 border-teal-400/30' },
+  heavy: { label: 'Treino Pesado', carbsGKg: 3.6, color: '#00e5ff', bg: 'bg-cyan-500/15 text-cyan-200 border-cyan-400/30' },
+  refeed: { label: 'Refeed / High Carb', carbsGKg: 4.8, color: '#a78bfa', bg: 'bg-violet-500/15 text-violet-200 border-violet-400/30' }
+};
+
+// ============================================================================
+// 4. PERFIS PRÉ-CONFIGURADOS & PERSISTÊNCIA LOCALSTORAGE
+// ============================================================================
+const PRESET_PROFILES = {
+  caso_padrao: {
+    id: 'caso_padrao',
+    label: 'Caso Padrão (10 Semanas)',
+    userName: 'Paciente Caso #01 — Estudo 10 Semanas',
+    goalLabel: 'Recomposição & Controle Metabólico',
+    sex: 'male',
+    age: 34,
+    startWeight: 86.0,
+    targetWeight: 77.5,
+    heightCm: 177,
+    agents: [
+      { id: 'ag_1', drugId: 'tirzepatida', dose: 5.0, freqDays: 7, startWeek: 1 },
+      { id: 'ag_2', drugId: 'durateston', dose: 250, freqDays: 14, startWeek: 1 }
+    ],
+    folds: {
+      peitoral: 11.5,
+      axilar_media: 12.0,
+      triceps: 10.5,
+      subescapular: 15.0,
+      abdominal: 21.0,
+      supra_iliaca: 16.5,
+      coxa: 14.0
+    },
+    records: [
+      { id: 'r1', date: '2026-09-07', week: 1, weight: 86.0, bodyFat: 19.8, rhr: 69, chest: 105.0, waist: 91.0, abdomen: 94.0, hip: 101.5, armR: 37.8, armL: 37.5, thighR: 59.5, thighL: 59.2, source: 'Adipômetro JP3', note: 'Avaliação Basal (Sem 1)' },
+      { id: 'r2', date: '2026-09-28', week: 4, weight: 83.4, bodyFat: 17.9, rhr: 65, chest: 104.2, waist: 87.5, abdomen: 90.0, hip: 99.5, armR: 37.6, armL: 37.4, thighR: 58.6, thighL: 58.4, source: 'Adipômetro JP3', note: 'Titulação Sem 4' },
+      { id: 'r3', date: '2026-10-19', week: 7, weight: 81.1, bodyFat: 16.1, rhr: 62, chest: 103.6, waist: 84.4, abdomen: 86.5, hip: 97.8, armR: 37.5, armL: 37.3, thighR: 58.0, thighL: 57.8, source: 'Adipômetro JP3', note: 'Steady-State Sem 7' },
+      { id: 'r4', date: '2026-11-09', week: 10, weight: 79.2, bodyFat: 14.6, rhr: 59, chest: 103.2, waist: 81.8, abdomen: 83.6, hip: 96.4, armR: 37.5, armL: 37.3, thighR: 57.6, thighL: 57.5, source: 'Adipômetro JP3', note: 'Fechamento Sem 10' }
+    ]
+  },
+  recomposicao: {
+    id: 'recomposicao',
+    label: 'Recomposição Corporal (TRT + Dieta)',
+    userName: 'Atleta Recreacional — Recomposição',
+    goalLabel: 'Hipertrofia & Definição Muscular',
+    sex: 'male',
+    age: 38,
+    startWeight: 82.0,
+    targetWeight: 80.0,
+    heightCm: 175,
+    agents: [
+      { id: 'ag_r1', drugId: 'cipionato_testosterona', dose: 100, freqDays: 7, startWeek: 1 }
+    ],
+    folds: {
+      peitoral: 8.5,
+      axilar_media: 9.0,
+      triceps: 8.0,
+      subescapular: 12.0,
+      abdominal: 15.5,
+      supra_iliaca: 12.5,
+      coxa: 11.0
+    },
+    records: [
+      { id: 'rr1', date: '2026-09-01', week: 1, weight: 82.0, bodyFat: 16.2, rhr: 64, chest: 104.0, waist: 84.5, abdomen: 86.5, hip: 98.0, armR: 38.2, armL: 38.0, thighR: 59.0, thighL: 58.8, source: 'Adipômetro JP7', note: 'Início do bloco' },
+      { id: 'rr2', date: '2026-10-01', week: 5, weight: 81.4, bodyFat: 14.3, rhr: 61, chest: 104.8, waist: 82.0, abdomen: 83.8, hip: 97.2, armR: 38.7, armL: 38.5, thighR: 59.5, thighL: 59.3, source: 'Adipômetro JP7', note: 'Ganho magro + queda BF' },
+      { id: 'rr3', date: '2026-11-01', week: 9, weight: 80.9, bodyFat: 12.6, rhr: 59, chest: 105.5, waist: 79.8, abdomen: 81.4, hip: 96.5, armR: 39.1, armL: 38.9, thighR: 60.0, thighL: 59.8, source: 'Adipômetro JP7', note: 'Pico de definição' }
+    ]
+  },
+  metabolico: {
+    id: 'metabolico',
+    label: 'Protocolo Clínico Metabólico',
+    userName: 'Paciente Clínico #03 — Síndrome Metabólica',
+    goalLabel: 'Controle Glicêmico, Lipídico & Redução Visceral',
+    sex: 'female',
+    age: 45,
+    startWeight: 78.5,
+    targetWeight: 67.0,
+    heightCm: 164,
+    agents: [
+      { id: 'ag_m1', drugId: 'semaglutida', dose: 1.0, freqDays: 7, startWeek: 1 },
+      { id: 'ag_m2', drugId: 'metformina_xr', dose: 1000, freqDays: 1, startWeek: 1 },
+      { id: 'ag_m3', drugId: 'estatina_alta_potencia', dose: 10, freqDays: 1, startWeek: 1 }
+    ],
+    folds: {
+      peitoral: 14.0,
+      axilar_media: 16.0,
+      triceps: 19.5,
+      subescapular: 18.0,
+      abdominal: 24.0,
+      supra_iliaca: 21.0,
+      coxa: 24.5
+    },
+    records: [
+      { id: 'rm1', date: '2026-08-15', week: 1, weight: 78.5, bodyFat: 31.4, rhr: 74, chest: 98.0, waist: 88.0, abdomen: 93.0, hip: 106.0, armR: 32.5, armL: 32.3, thighR: 61.0, thighL: 60.8, source: 'Adipômetro JP3', note: 'Avaliação inicial' },
+      { id: 'rm2', date: '2026-09-26', week: 6, weight: 74.2, bodyFat: 28.6, rhr: 69, chest: 95.5, waist: 83.5, abdomen: 88.0, hip: 103.0, armR: 31.5, armL: 31.4, thighR: 59.2, thighL: 59.0, source: 'Adipômetro JP3', note: 'Semana 6 — melhora glicêmica' },
+      { id: 'rm3', date: '2026-11-07', week: 12, weight: 70.6, bodyFat: 25.8, rhr: 65, chest: 93.2, waist: 79.8, abdomen: 84.0, hip: 100.2, armR: 30.8, armL: 30.7, thighR: 57.6, thighL: 57.5, source: 'Adipômetro JP3', note: 'Semana 12 — redução visceral' }
+    ]
   }
+};
+
+const STORAGE_KEY = 'nexus_protocol_hierarchical_v7';
+
+function buildStateFromPreset(presetKey = 'caso_padrao') {
+  const p = PRESET_PROFILES[presetKey] || PRESET_PROFILES.caso_padrao;
+  return {
+    activePresetId: p.id,
+    profile: {
+      appTitle: 'NexusProtocol',
+      userName: p.userName,
+      goalLabel: p.goalLabel,
+      sex: p.sex,
+      age: p.age,
+      startWeight: p.startWeight,
+      targetWeight: p.targetWeight,
+      heightCm: p.heightCm
+    },
+    skinfold: {
+      protocolId: p.sex === 'female' ? 'jp3_female' : 'jp3_male',
+      selectedSiteId: p.sex === 'female' ? 'triceps' : 'peitoral',
+      folds: { ...p.folds }
+    },
+    clinicalStudy: {
+      horizonWeeks: 12,
+      selectedCategory: 'all',
+      searchQuery: '',
+      selectedEncyclopediaDrugId: p.agents[0]?.drugId || 'semaglutida',
+      agents: p.agents.map((a) => ({ ...a }))
+    },
+    nutrition: {
+      selectedDayId: 'qua',
+      proteinGKg: 2.1,
+      fatGKg: 0.75,
+      dayTypes: {
+        seg: 'rest',
+        ter: 'moderate',
+        qua: 'heavy',
+        qui: 'rest',
+        sex: 'heavy',
+        sab: 'refeed',
+        dom: 'rest'
+      }
+    },
+    mealPlan: [
+      {
+        id: 'm_cafe',
+        name: 'Café da Manhã',
+        time: '07:30',
+        items: [
+          { id: 'i1', foodId: 'ovos', grams: 150 },
+          { id: 'i2', foodId: 'torrada_integral', grams: 40 },
+          { id: 'i3', foodId: 'queijo_minas', grams: 40 }
+        ]
+      },
+      {
+        id: 'm_almoco',
+        name: 'Almoço',
+        time: '12:30',
+        items: [
+          { id: 'i4', foodId: 'frango', grams: 180 },
+          { id: 'i5', foodId: 'arroz_branco', grams: 160 },
+          { id: 'i6', foodId: 'azeite', grams: 10 }
+        ]
+      },
+      {
+        id: 'm_tarde',
+        name: 'Lanche / Pré-Treino',
+        time: '16:30',
+        items: [
+          { id: 'i7', foodId: 'iogurte_natural', grams: 170 },
+          { id: 'i8', foodId: 'whey', grams: 30 },
+          { id: 'i9', foodId: 'doce_leite', grams: 20 }
+        ]
+      },
+      {
+        id: 'm_jantar',
+        name: 'Pós-Treino / Jantar',
+        time: '20:00',
+        items: [
+          { id: 'i10', foodId: 'patinho', grams: 170 },
+          { id: 'i11', foodId: 'batata_inglesa', grams: 220 }
+        ]
+      },
+      {
+        id: 'm_ceia',
+        name: 'Ceia',
+        time: '22:30',
+        items: [
+          { id: 'i12', foodId: 'queijo_cottage', grams: 100 },
+          { id: 'i13', foodId: 'amendoim', grams: 15 }
+        ]
+      }
+    ],
+    records: p.records.map((r) => ({ ...r })),
+    equivalence: {
+      group: 'carbs',
+      mode: 'macro',
+      baseFoodId: 'arroz_branco',
+      baseGrams: 150,
+      targetFoodId: 'batata_inglesa'
+    }
+  };
 }
 
-export default function App() {
-  const saved = useMemo(() => loadSavedState(), []);
-
-  const [profiles, setProfiles] = useState(saved?.profiles || INITIAL_PROFILES);
-  const [activeProfileId, setActiveProfileId] = useState(saved?.activeProfileId || "p1");
-  const [foods, setFoods] = useState(saved?.foods || DEFAULT_FOODS);
-
-  const [mainModule, setMainModule] = useState(saved?.mainModule || "overview");
-  const [subTab, setSubTab] = useState({
-    overview: "integrated",
-    nutrition: "cycle",
-    anthropometry: "caliper",
-    clinical: "encyclopedia",
-  });
-
-  // Adipômetro & Mapa Anatômico
-  const [selectedSiteId, setSelectedSiteId] = useState("peitoral");
-  const [anatomyView, setAnatomyView] = useState("frontal");
-  const [caliperNote, setCaliperNote] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
-
-  // Enciclopédia & Simulador PK/PD
-  const [drugSearch, setDrugSearch] = useState("");
-  const [drugCategoryFilter, setDrugCategoryFilter] = useState("Todos");
-  const [selectedDrugId, setSelectedDrugId] = useState("semaglutida");
-  const [drugDetailTab, setDrugDetailTab] = useState("overview");
-  const [simHorizonDays, setSimHorizonDays] = useState(56);
-  const [showIndividualCurves, setShowIndividualCurves] = useState(true);
-
-  // Nutrição: Cardápio, Novo Alimento & Equivalência
-  const [newMealTitle, setNewMealTitle] = useState("");
-  const [mealAddFoodId, setMealAddFoodId] = useState({});
-  const [mealAddGrams, setMealAddGrams] = useState({});
-  const [customFood, setCustomFood] = useState({
-    name: "",
-    group: "Proteína",
-    kcal: "",
-    p: "",
-    c: "",
-    g: "",
-  });
-  const [equivSourceId, setEquivSourceId] = useState("f11");
-  const [equivTargetId, setEquivTargetId] = useState("f10");
-  const [equivSourceGrams, setEquivSourceGrams] = useState(150);
-
-  // Perfis: criar / editar
-  const [newProfileName, setNewProfileName] = useState("");
-  const [newProfileSex, setNewProfileSex] = useState("male");
-  const [newProfileAge, setNewProfileAge] = useState(30);
-  const [newProfileWeight, setNewProfileWeight] = useState(80);
-  const [newProfileHeight, setNewProfileHeight] = useState(175);
-
-  const activeProfile = useMemo(
-    () => profiles.find((p) => p.id === activeProfileId) || profiles[0],
-    [profiles, activeProfileId]
-  );
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          profiles,
-          activeProfileId,
-          foods,
-          mainModule,
-        })
-      );
-    } catch {
-      // ignora erro de cota local
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.profile && parsed.clinicalStudy && parsed.nutrition && parsed.records && parsed.skinfold) {
+        return parsed;
+      }
     }
-  }, [profiles, activeProfileId, foods, mainModule]);
+  } catch (e) {
+    console.warn('Falha ao ler localStorage:', e);
+  }
+  return buildStateFromPreset('caso_padrao');
+}
 
-  const notify = (msg) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 2800);
-  };
+// ============================================================================
+// 5. MOTOR MATEMÁTICO DE SIMULAÇÃO FARMACOCINÉTICA MULTI-AGENTE & MULTI-ÉSTER
+// ============================================================================
+function simulateMultiAgentPK(agents, horizonWeeks = 12) {
+  const safeWeeks = Math.min(24, Math.max(4, Number(horizonWeeks) || 12));
+  const totalDays = safeWeeks * 7;
+  const step = 0.25;
+  const daysAxis = [];
+  for (let t = 0; t <= totalDays; t += step) {
+    daysAxis.push(Number(t.toFixed(2)));
+  }
 
-  const updateActiveProfile = (updater) => {
-    setProfiles((prev) =>
-      prev.map((p) => {
-        if (p.id !== activeProfile.id) return p;
-        return typeof updater === "function" ? updater(p) : { ...p, ...updater };
-      })
+  const series = agents.map((ag) => {
+    const drug = REGULATED_DRUGS.find((d) => d.id === ag.drugId) || REGULATED_DRUGS[0];
+    const freqDays = Math.max(0.25, Number(ag.freqDays) || drug.defaultFreqDays);
+    const startDay = Math.max(0, ((Number(ag.startWeek) || 1) - 1) * 7);
+    const dose = Math.max(0, Number(ag.dose) || 0);
+
+    const doseTimes = [];
+    for (let d = startDay; d < totalDays; d += freqDays) {
+      doseTimes.push(d);
+    }
+
+    let rawPoints = [];
+    if (drug.isMultiEster && Array.isArray(drug.esters)) {
+      const esterCurves = drug.esters.map((est) => {
+        const keEst = Math.LN2 / Math.max(0.15, est.halfLifeDays);
+        const kaEst = est.ka || 2.5;
+        const estDose = dose * est.fraction;
+        return daysAxis.map((t) => {
+          let sum = 0;
+          for (let i = 0; i < doseTimes.length; i++) {
+            const dt = t - doseTimes[i];
+            if (dt >= 0 && estDose > 0) {
+              const factor =
+                Math.abs(kaEst - keEst) > 0.005
+                  ? (kaEst / (kaEst - keEst)) * (Math.exp(-keEst * dt) - Math.exp(-kaEst * dt))
+                  : Math.exp(-keEst * dt);
+              sum += estDose * Math.max(0, factor);
+            }
+          }
+          return sum;
+        });
+      });
+      rawPoints = daysAxis.map((_, idx) =>
+        esterCurves.reduce((acc, curve) => acc + curve[idx], 0)
+      );
+    } else {
+      const halfLifeDays = Math.max(0.08, drug.halfLifeDays);
+      const ke = Math.LN2 / halfLifeDays;
+      const ka = drug.isOral ? 6.0 : 2.6;
+      rawPoints = daysAxis.map((t) => {
+        let conc = 0;
+        for (let i = 0; i < doseTimes.length; i++) {
+          const dt = t - doseTimes[i];
+          if (dt >= 0 && dose > 0) {
+            const factor =
+              Math.abs(ka - ke) > 0.005
+                ? (ka / (ka - ke)) * (Math.exp(-ke * dt) - Math.exp(-ka * dt))
+                : Math.exp(-ke * dt);
+            conc += dose * Math.max(0, factor);
+          }
+        }
+        return conc;
+      });
+    }
+
+    const peakConc = Math.max(0.0001, ...rawPoints);
+    const normalizedPoints = rawPoints.map((val) => Number(((val / peakConc) * 100).toFixed(2)));
+    const effectiveHalfLife = drug.isMultiEster ? 10.0 : drug.halfLifeDays;
+    const steadyStateDays = Number((effectiveHalfLife * 4.5).toFixed(1));
+    const steadyStateWeek = Number((steadyStateDays / 7).toFixed(1));
+
+    return {
+      agentId: ag.id,
+      drug,
+      dose,
+      freqDays,
+      startWeek: ag.startWeek,
+      peakConc: Number(peakConc.toFixed(2)),
+      steadyStateDays,
+      steadyStateWeek,
+      rawPoints,
+      normalizedPoints
+    };
+  });
+
+  const combinedPoints = daysAxis.map((_, idx) => {
+    if (!series.length) return 0;
+    const sum = series.reduce((acc, s) => acc + s.normalizedPoints[idx], 0);
+    return Number((sum / series.length).toFixed(2));
+  });
+
+  // Detector Inteligente de Interações e Sobreposição Clínica
+  const alerts = [];
+  const activeDrugs = series.map((s) => s.drug);
+  const ids = activeDrugs.map((d) => d.id);
+  const incretins = activeDrugs.filter((d) => d.isIncretin);
+  const androgens = activeDrugs.filter((d) => d.category === 'hormonios');
+  const thyroids = activeDrugs.filter((d) => d.category === 'tireoide');
+  const oralDrugs = activeDrugs.filter((d) => d.isOral);
+
+  if (incretins.length >= 2) {
+    alerts.push({
+      level: 'high',
+      title: 'Duplicidade de Classe (Agonistas GLP-1 / GIP)',
+      text: `Você associou ${incretins.map((d) => `${d.name} (${d.brandNames})`).join(' + ')}. Na prática clínica regulamentada, agonistas de GLP-1/GIP não são combinados entre si devido à competição pelo mesmo receptor e risco elevado de náuseas graves e gastroparesia.`
+    });
+  }
+  if (androgens.length >= 2) {
+    alerts.push({
+      level: 'high',
+      title: 'Associação de Múltiplas Formulações de Testosterona',
+      text: `Você selecionou ${androgens.map((d) => `${d.name} (${d.brandNames})`).join(' + ')}. Em protocolos de TRT regulamentados utiliza-se uma única formulação para titular dose e monitorar hematócrito (>52%) e estradiol sem somatório imprevisível.`
+    });
+  }
+  if (incretins.length >= 1 && oralDrugs.length > 0) {
+    alerts.push({
+      level: 'medium',
+      title: 'Retardo do Esvaziamento Gástrico vs. Absorção Oral',
+      text: `Agonistas incretínicos retardam o esvaziamento gástrico, podendo alterar a absorção de ${oralDrugs.map((d) => d.name).join(', ')}. Em uso de Levotiroxina ("Puran T4"), manter jejum rigoroso de 45–60 min e reavaliar TSH após 6 semanas.`
+    });
+  }
+  if (incretins.length >= 1 && ids.includes('metformina_xr')) {
+    alerts.push({
+      level: 'info',
+      title: 'Associação Sinérgica Documentada (Incretina + Metformina)',
+      text: 'Combinação validada nos ensaios SUSTAIN e SURPASS: sensibilização hepática via AMPK + resposta incretínica sem risco de hipoglicemia.'
+    });
+  }
+  if (incretins.length >= 1 && ids.includes('inibidor_sglt2')) {
+    alerts.push({
+      level: 'medium',
+      title: 'Sinergia Cardiorrenal + Vigilância de Hidratação e Cetonemia',
+      text: 'Forte proteção cardiorrenal, mas requer atenção à hidratação diária e prevenção de cetoacidose euglicêmica em dietas muito baixas em carboidratos.'
+    });
+  }
+  if (androgens.length >= 1 && ids.includes('liotironina')) {
+    alerts.push({
+      level: 'medium',
+      title: 'Sobrecarga Cronotrópica & Cardiovascular (Testosterona + T3)',
+      text: 'Associação pode potencializar aumento da frequência cardíaca de repouso, pressão arterial e consumo miocárdico de oxigênio.'
+    });
+  }
+  if (ids.includes('orlistate') && ids.includes('levotiroxina')) {
+    alerts.push({
+      level: 'high',
+      title: 'Interação de Absorção Intestinal (Orlistate + Levotiroxina)',
+      text: 'O Orlistate ("Xenical") reduz a absorção intestinal de Levotiroxina. Espaçar administrações em pelo menos 4 horas.'
+    });
+  }
+  if (ids.includes('durateston')) {
+    alerts.push({
+      level: 'info',
+      title: 'Perfil Bifásico Multi-Éster ("Durateston" / "Sustanon 250")',
+      text: 'O Propionato (30mg) gera pico rápido em 24–48h, enquanto o Decanoato (100mg) sustenta a cauda por até 14–21 dias.'
+    });
+  }
+  if (thyroids.length >= 2) {
+    alerts.push({
+      level: 'medium',
+      title: 'Terapia Combinada T4 + T3',
+      text: 'Exige ajuste fino da dose de T4 para evitar hipertireoidismo subclínico, monitorando T3 livre, T4 livre, TSH e FCR.'
+    });
+  }
+
+  return { daysAxis, totalDays, safeWeeks, series, combinedPoints, alerts };
+}
+
+// ============================================================================
+// 6. COMPONENTES VISUAIS SVG (MAPA ANATÔMICO & GRÁFICOS INTERATIVOS)
+// ============================================================================
+function AnatomicalSkinfoldMapSVG({ activeSites, selectedSiteId, onSelectSite }) {
+  const frontSites = Object.values(SKINFOLD_SITES).filter((s) => s.view === 'front');
+  const backSites = Object.values(SKINFOLD_SITES).filter((s) => s.view === 'back');
+
+  const renderPin = (site) => {
+    const isInProtocol = activeSites.includes(site.id);
+    const isSelected = selectedSiteId === site.id;
+
+    return (
+      <g
+        key={site.id}
+        onClick={() => onSelectSite(site.id)}
+        className="cursor-pointer transition-transform duration-200"
+      >
+        {isSelected && (
+          <circle
+            cx={site.x}
+            cy={site.y}
+            r="14"
+            fill="none"
+            stroke="#00e5ff"
+            strokeWidth="1.8"
+            strokeDasharray="3 2"
+          />
+        )}
+        <circle
+          cx={site.x}
+          cy={site.y}
+          r={isSelected ? '7.5' : isInProtocol ? '6' : '4.5'}
+          fill={isSelected ? '#00e5ff' : isInProtocol ? '#14b8a6' : '#475569'}
+          stroke="#060d1f"
+          strokeWidth="2"
+        />
+        <text
+          x={site.x + (site.x > 160 ? -10 : 10)}
+          y={site.y + 4}
+          textAnchor={site.x > 160 ? 'end' : 'start'}
+          fill={isSelected ? '#00e5ff' : isInProtocol ? '#e2e8f0' : '#64748b'}
+          fontSize="8.5"
+          fontWeight={isSelected || isInProtocol ? 'bold' : 'normal'}
+        >
+          {site.name.split(' ')[0]}
+        </text>
+      </g>
     );
   };
 
-  const setActiveSubTab = (tabName) => {
-    setSubTab((prev) => ({ ...prev, [mainModule]: tabName }));
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 280 415" className="h-auto w-full max-w-[320px] select-none">
+        <defs>
+          <linearGradient id="bodySilhouetteGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#102952" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#08152e" stopOpacity="0.98" />
+          </linearGradient>
+        </defs>
+
+        <text x="102" y="18" textAnchor="middle" fill="#00e5ff" fontSize="10" fontWeight="bold">
+          VISTA FRONTAL
+        </text>
+        <text x="176" y="18" textAnchor="middle" fill="#14b8a6" fontSize="10" fontWeight="bold">
+          VISTA DORSAL
+        </text>
+
+        {/* SILHUETA FRONTAL */}
+        <g stroke="#1e3a6e" strokeWidth="1.5" fill="url(#bodySilhouetteGrad)">
+          <circle cx="102" cy="48" r="18" />
+          <path d="M 94 65 L 94 78 L 110 78 L 110 65 Z" />
+          <path d="M 66 86 Q 102 76 138 86 L 146 188 L 135 190 L 130 118 L 128 228 L 134 388 L 114 388 L 105 256 L 99 256 L 90 388 L 70 388 L 76 228 L 74 118 L 69 190 L 58 188 Z" />
+          <line x1="102" y1="84" x2="102" y2="232" stroke="#1e3a6e" strokeDasharray="2 3" />
+          <path d="M 80 128 Q 91 136 102 128 Q 113 136 124 128" fill="none" stroke="#1e3a6e" />
+        </g>
+
+        {/* SILHUETA DORSAL */}
+        <g stroke="#1e3a6e" strokeWidth="1.5" fill="url(#bodySilhouetteGrad)">
+          <circle cx="176" cy="48" r="18" />
+          <path d="M 168 65 L 168 78 L 184 78 L 184 65 Z" />
+          <path d="M 140 86 Q 176 76 212 86 L 220 188 L 209 190 L 204 118 L 202 228 L 208 388 L 188 388 L 179 256 L 173 256 L 164 388 L 144 388 L 150 228 L 148 118 L 143 190 L 132 188 Z" />
+          <path d="M 152 108 L 164 112 L 158 148 Z" fill="none" stroke="#1e3a6e" />
+          <path d="M 200 108 L 188 112 L 194 148 Z" fill="none" stroke="#1e3a6e" />
+        </g>
+
+        {frontSites.map(renderPin)}
+        {backSites.map(renderPin)}
+      </svg>
+
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-400">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#00e5ff]" /> Prega Selecionada
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#14b8a6]" /> No Protocolo Ativo
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-slate-600" /> Outros Sítios
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function IntegratedOverviewChartSVG({ records, clinicalSim }) {
+  const [hoverWeek, setHoverWeek] = useState(null);
+
+  const width = 760;
+  const height = 265;
+  const padL = 48;
+  const padR = 48;
+  const padT = 24;
+  const padB = 34;
+  const plotW = width - padL - padR;
+  const plotH = height - padT - padB;
+
+  const maxWeek = Math.max(
+    10,
+    clinicalSim.safeWeeks || 12,
+    ...records.map((r) => Number(r.week) || 1)
+  );
+
+  const weights = records.map((r) => Number(r.weight) || 80);
+  const wMin = Math.min(...weights) - 2;
+  const wMax = Math.max(...weights) + 2;
+  const wSpan = Math.max(1, wMax - wMin);
+
+  const bfs = records.filter((r) => r.bodyFat !== null && r.bodyFat !== undefined).map((r) => Number(r.bodyFat));
+  const bfMin = bfs.length ? Math.min(...bfs) - 2 : 10;
+  const bfMax = bfs.length ? Math.max(...bfs) + 2 : 30;
+  const bfSpan = Math.max(1, bfMax - bfMin);
+
+  const toX = (week) => padL + ((week - 1) / Math.max(1, maxWeek - 1)) * plotW;
+  const toYW = (w) => padT + plotH - ((w - wMin) / wSpan) * plotH;
+  const toYBf = (bf) => padT + plotH - ((bf - bfMin) / bfSpan) * plotH;
+  const toYPk = (pct) => padT + plotH - (Math.min(100, Math.max(0, pct)) / 100) * plotH;
+
+  const pkPath = useMemo(() => {
+    if (!clinicalSim.daysAxis.length || !clinicalSim.series.length) return '';
+    return clinicalSim.daysAxis
+      .map((day, idx) => {
+        const w = 1 + day / 7;
+        const x = Math.min(padL + plotW, Math.max(padL, toX(w)));
+        const y = toYPk(clinicalSim.combinedPoints[idx]);
+        return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(' ');
+  }, [clinicalSim, maxWeek]);
+
+  const weightPath = records
+    .map((r, i) => `${i === 0 ? 'M' : 'L'} ${toX(r.week || i + 1).toFixed(1)} ${toYW(r.weight).toFixed(1)}`)
+    .join(' ');
+
+  const bfRecords = records.filter((r) => r.bodyFat !== null && r.bodyFat !== undefined);
+  const bfPath = bfRecords
+    .map((r, i) => `${i === 0 ? 'M' : 'L'} ${toX(r.week || i + 1).toFixed(1)} ${toYBf(r.bodyFat).toFixed(1)}`)
+    .join(' ');
+
+  const weeksTicks = [];
+  for (let w = 1; w <= maxWeek; w += maxWeek > 14 ? 2 : 1) {
+    weeksTicks.push(w);
+  }
+
+  return (
+    <div className="relative w-full select-none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full overflow-visible">
+        {[0, 0.5, 1].map((f, i) => {
+          const y = padT + plotH - f * plotH;
+          const wVal = (wMin + f * wSpan).toFixed(1);
+          const bfVal = (bfMin + f * bfSpan).toFixed(1);
+          return (
+            <g key={i}>
+              <line x1={padL} y1={y} x2={width - padR} y2={y} stroke="rgba(148,163,184,0.12)" strokeDasharray="3 3" />
+              <text x={padL - 8} y={y + 4} textAnchor="end" fill="#00e5ff" fontSize="10">
+                {wVal}kg
+              </text>
+              <text x={width - padR + 8} y={y + 4} textAnchor="start" fill="#14b8a6" fontSize="10">
+                {bfVal}%
+              </text>
+            </g>
+          );
+        })}
+
+        {weeksTicks.map((w) => (
+          <text key={w} x={toX(w)} y={padT + plotH + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
+            Sem {w}
+          </text>
+        ))}
+
+        {pkPath && (
+          <path d={pkPath} fill="none" stroke="#a78bfa" strokeWidth="1.8" strokeDasharray="4 3" opacity="0.7" />
+        )}
+
+        {bfRecords.length > 1 && (
+          <path d={bfPath} fill="none" stroke="#14b8a6" strokeWidth="2.4" strokeLinecap="round" />
+        )}
+
+        {records.length > 1 && (
+          <path d={weightPath} fill="none" stroke="#00e5ff" strokeWidth="3" strokeLinecap="round" />
+        )}
+
+        {records.map((r, idx) => {
+          const wk = r.week || idx + 1;
+          const x = toX(wk);
+          return (
+            <g
+              key={r.id || idx}
+              className="cursor-pointer"
+              onMouseEnter={() => setHoverWeek(idx)}
+              onMouseLeave={() => setHoverWeek(null)}
+            >
+              <circle cx={x} cy={toYW(r.weight)} r="5" fill="#060d1f" stroke="#00e5ff" strokeWidth="2.5" />
+              {r.bodyFat !== null && r.bodyFat !== undefined && (
+                <circle cx={x} cy={toYBf(r.bodyFat)} r="4.5" fill="#060d1f" stroke="#14b8a6" strokeWidth="2.3" />
+              )}
+            </g>
+          );
+        })}
+
+        {hoverWeek !== null && records[hoverWeek] && (() => {
+          const r = records[hoverWeek];
+          const x = toX(r.week || hoverWeek + 1);
+          return (
+            <g transform={`translate(${x > width - 210 ? x - 195 : x + 12}, ${padT + 4})`}>
+              <rect width="185" height="62" rx="10" fill="#08152e" stroke="#00e5ff" strokeWidth="1.2" />
+              <text x="10" y="17" fill="#94a3b8" fontSize="10" fontWeight="bold">
+                Semana {r.week || hoverWeek + 1} ({r.date})
+              </text>
+              <text x="10" y="34" fill="#00e5ff" fontSize="11" fontWeight="bold">
+                Peso: {r.weight} kg
+              </text>
+              <text x="10" y="50" fill="#14b8a6" fontSize="11" fontWeight="bold">
+                % Gordura: {r.bodyFat ? `${r.bodyFat}%` : 'N/D'}
+              </text>
+            </g>
+          );
+        })()}
+      </svg>
+    </div>
+  );
+}
+
+function MultiAgentPKChartSVG({ simData }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const { daysAxis, totalDays, safeWeeks, series, combinedPoints } = simData;
+
+  const width = 760;
+  const height = 255;
+  const padL = 46;
+  const padR = 20;
+  const padT = 20;
+  const padB = 34;
+  const plotW = width - padL - padR;
+  const plotH = height - padT - padB;
+
+  const toX = (day) => padL + (day / Math.max(1, totalDays)) * plotW;
+  const toY = (pct) => padT + plotH - (Math.min(105, Math.max(0, pct)) / 105) * plotH;
+
+  const combinedPath = useMemo(() => {
+    if (!daysAxis.length) return '';
+    return daysAxis
+      .map((d, idx) => `${idx === 0 ? 'M' : 'L'} ${toX(d).toFixed(1)} ${toY(combinedPoints[idx]).toFixed(1)}`)
+      .join(' ');
+  }, [daysAxis, combinedPoints, totalDays]);
+
+  const handleMouseMove = (e) => {
+    if (!daysAxis.length) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * width;
+    const targetDay = ((relX - padL) / plotW) * totalDays;
+    let bestIdx = 0;
+    let bestDiff = Infinity;
+    for (let i = 0; i < daysAxis.length; i++) {
+      const diff = Math.abs(daysAxis[i] - targetDay);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = i;
+      }
+    }
+    setHoverIdx(bestIdx);
   };
 
-  const handleSelectMainModule = (modKey, defaultSub) => {
-    setMainModule(modKey);
-    if (defaultSub) {
-      setSubTab((prev) => ({ ...prev, [modKey]: defaultSub }));
+  const yTicks = [0, 25, 50, 75, 100];
+  const weekStep = safeWeeks <= 12 ? 1 : 2;
+  const xTicks = [];
+  for (let w = 0; w <= safeWeeks; w += weekStep) {
+    xTicks.push({ label: `S${w}`, x: toX(w * 7) });
+  }
+
+  const activeDay = hoverIdx !== null ? daysAxis[hoverIdx] : null;
+
+  return (
+    <div className="relative w-full select-none">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-auto w-full overflow-visible"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        {yTicks.map((val) => {
+          const y = toY(val);
+          return (
+            <g key={val}>
+              <line x1={padL} y1={y} x2={width - padR} y2={y} stroke="rgba(148, 163, 184, 0.14)" strokeDasharray="3 3" />
+              <text x={padL - 8} y={y + 4} textAnchor="end" fill="#94a3b8" fontSize="10">
+                {val}%
+              </text>
+            </g>
+          );
+        })}
+
+        {xTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={t.x} y1={padT} x2={t.x} y2={padT + plotH} stroke="rgba(148, 163, 184, 0.08)" />
+            <text x={t.x} y={padT + plotH + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
+              {t.label}
+            </text>
+          </g>
+        ))}
+
+        {series.length > 1 && (
+          <path d={combinedPath} fill="none" stroke="#e2e8f0" strokeWidth="1.8" strokeDasharray="5 4" opacity="0.85" />
+        )}
+
+        {series.map((s) => {
+          const dPath = daysAxis
+            .map((day, idx) => `${idx === 0 ? 'M' : 'L'} ${toX(day).toFixed(1)} ${toY(s.normalizedPoints[idx]).toFixed(1)}`)
+            .join(' ');
+          return (
+            <path key={s.agentId} d={dPath} fill="none" stroke={s.drug.color} strokeWidth="2.6" strokeLinecap="round" />
+          );
+        })}
+
+        {activeDay !== null && hoverIdx !== null && (
+          <g>
+            <line x1={toX(activeDay)} y1={padT} x2={toX(activeDay)} y2={padT + plotH} stroke="#00e5ff" strokeWidth="1.2" strokeDasharray="4 3" />
+            {series.map((s) => (
+              <circle
+                key={s.agentId}
+                cx={toX(activeDay)}
+                cy={toY(s.normalizedPoints[hoverIdx])}
+                r="4.5"
+                fill="#060d1f"
+                stroke={s.drug.color}
+                strokeWidth="2.5"
+              />
+            ))}
+            <g transform={`translate(${toX(activeDay) > width - 235 ? toX(activeDay) - 225 : toX(activeDay) + 12}, ${padT + 4})`}>
+              <rect width="215" height={34 + series.length * 17} rx="10" fill="#08152e" stroke="#00e5ff" strokeWidth="1" />
+              <text x="10" y="17" fill="#94a3b8" fontSize="10" fontWeight="bold">
+                Dia {activeDay} (Semana {Math.ceil((activeDay + 0.01) / 7)})
+              </text>
+              {series.map((s, idx) => (
+                <text key={s.agentId} x="10" y={34 + idx * 17} fill={s.drug.color} fontSize="10.5" fontWeight="bold">
+                  {s.drug.name.slice(0, 18)}: {s.normalizedPoints[hoverIdx].toFixed(0)}% ({s.rawPoints[hoverIdx].toFixed(1)}
+                  {s.drug.unit})
+                </text>
+              ))}
+            </g>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function MetricTrendSVG({ records, metricKey, label, unit, color = '#00e5ff' }) {
+  const [hovered, setHovered] = useState(null);
+
+  const validRecords = useMemo(
+    () => records.filter((r) => r[metricKey] !== null && r[metricKey] !== undefined && !Number.isNaN(Number(r[metricKey]))),
+    [records, metricKey]
+  );
+
+  const width = 640;
+  const height = 210;
+  const padL = 46;
+  const padR = 24;
+  const padT = 22;
+  const padB = 34;
+  const plotW = width - padL - padR;
+  const plotH = height - padT - padB;
+
+  if (!validRecords.length) {
+    return (
+      <div className="flex h-44 items-center justify-center rounded-xl border border-dashed border-cyan-500/20 text-xs text-slate-400">
+        Sem registros numéricos para {label}.
+      </div>
+    );
+  }
+
+  const values = validRecords.map((r) => Number(r[metricKey]));
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const padVal = Math.max(0.5, (rawMax - rawMin) * 0.18);
+  const minVal = rawMin - padVal;
+  const maxVal = rawMax + padVal;
+  const span = Math.max(0.1, maxVal - minVal);
+
+  const pts = validRecords.map((r, idx) => {
+    const val = Number(r[metricKey]);
+    const x = validRecords.length === 1 ? padL + plotW / 2 : padL + (idx / (validRecords.length - 1)) * plotW;
+    const y = padT + plotH - ((val - minVal) / span) * plotH;
+    return { ...r, val, x, y };
+  });
+
+  const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L ${pts[pts.length - 1].x.toFixed(1)} ${(padT + plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`;
+
+  const yTicks = [0, 0.5, 1].map((f) => ({
+    val: (minVal + f * span).toFixed(1),
+    y: padT + plotH - f * plotH
+  }));
+
+  const active = hovered !== null && pts[hovered] ? pts[hovered] : null;
+
+  return (
+    <div className="relative w-full select-none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full overflow-visible">
+        <defs>
+          <linearGradient id={`grad_${metricKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+
+        {yTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={padL} y1={t.y} x2={width - padR} y2={t.y} stroke="rgba(148,163,184,0.14)" strokeDasharray="3 3" />
+            <text x={padL - 8} y={t.y + 4} textAnchor="end" fill="#94a3b8" fontSize="10">
+              {t.val}
+            </text>
+          </g>
+        ))}
+
+        {pts.map((p, i) => (
+          <text key={p.id || i} x={p.x} y={padT + plotH + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
+            {p.date.slice(5)}
+          </text>
+        ))}
+
+        <path d={areaPath} fill={`url(#grad_${metricKey})`} />
+        <path d={linePath} fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" />
+
+        {pts.map((p, idx) => (
+          <g
+            key={p.id || idx}
+            className="cursor-pointer"
+            onMouseEnter={() => setHovered(idx)}
+            onMouseLeave={() => setHovered(null)}
+            onClick={() => setHovered(idx)}
+          >
+            <circle cx={p.x} cy={p.y} r="12" fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={hovered === idx ? '6' : '4.2'} fill="#060d1f" stroke={color} strokeWidth="2.5" />
+          </g>
+        ))}
+
+        {active && (
+          <g transform={`translate(${active.x > width - 170 ? active.x - 160 : active.x + 10}, ${Math.max(padT, active.y - 34)})`}>
+            <rect width="150" height="44" rx="8" fill="#08152e" stroke={color} strokeWidth="1.2" />
+            <text x="10" y="17" fill="#94a3b8" fontSize="10">
+              {active.date}
+            </text>
+            <text x="10" y="34" fill="#ffffff" fontSize="12" fontWeight="bold">
+              {label}: {active.val.toFixed(1)} {unit}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// ============================================================================
+// 7. COMPONENTE PRINCIPAL: NEXUSPROTOCOL (NAVEGAÇÃO HIERÁRQUICA 2 NÍVEIS)
+// ============================================================================
+const NAVIGATION_MODULES = [
+  {
+    id: 'integrated',
+    label: 'Visão Integrada',
+    icon: Activity,
+    subTabs: [{ id: 'overview', label: 'Painel Unificado & Cruzamento' }]
+  },
+  {
+    id: 'nutrition',
+    label: 'Nutrição & Dieta',
+    icon: Utensils,
+    subTabs: [
+      { id: 'cycle', label: 'Ciclo Calórico & Refeed' },
+      { id: 'mealplan', label: 'Cardápio Personalizado' },
+      { id: 'equivalence', label: 'Equivalência Alimentar' }
+    ]
+  },
+  {
+    id: 'measures',
+    label: 'Medidas & Adipômetro',
+    icon: Ruler,
+    subTabs: [
+      { id: 'circumferences', label: 'Peso, FCR & Circunferências' },
+      { id: 'skinfold', label: 'Adipômetro & Mapa Anatômico' }
+    ]
+  },
+  {
+    id: 'clinical',
+    label: 'Clínica & Fármacos',
+    icon: Stethoscope,
+    subTabs: [
+      { id: 'simulator', label: 'Simulador Farmacocinético (PK/PD)' },
+      { id: 'encyclopedia', label: 'Bulário & Enciclopédia Clínica' }
+    ]
+  }
+];
+
+export default function App() {
+  const [state, setState] = useState(loadState);
+  const [activeModule, setActiveModule] = useState('integrated');
+  const [activeSubTab, setActiveSubTab] = useState('overview');
+  const [selectedMeasureMetric, setSelectedMeasureMetric] = useState('weight');
+  const [toast, setToast] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const [newRecord, setNewRecord] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    week: '',
+    weight: '',
+    bodyFat: '',
+    rhr: '',
+    chest: '',
+    waist: '',
+    abdomen: '',
+    hip: '',
+    armR: '',
+    armL: '',
+    thighR: '',
+    thighL: '',
+    note: ''
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Falha ao salvar localStorage:', e);
+    }
+  }, [state]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((prev) => (prev && prev.message === message ? null : prev));
+    }, 3400);
+  };
+
+  const handleSelectModule = (moduleId) => {
+    setActiveModule(moduleId);
+    const mod = NAVIGATION_MODULES.find((m) => m.id === moduleId);
+    if (mod && mod.subTabs.length) {
+      setActiveSubTab(mod.subTabs[0].id);
     }
   };
 
-  const bmrKcal = useMemo(() => {
-    const w = Number(activeProfile.weightKg) || 75;
-    const h = Number(activeProfile.heightCm) || 175;
-    const a = Number(activeProfile.age) || 30;
-    const base = 10 * w + 6.25 * h - 5 * a;
-    return Math.round(activeProfile.sex === "male" ? base + 5 : base - 161);
-  }, [activeProfile]);
+  const currentModuleObj =
+    NAVIGATION_MODULES.find((m) => m.id === activeModule) || NAVIGATION_MODULES[0];
 
-  const tdeeKcal = useMemo(() => {
-    return Math.round(bmrKcal * (Number(activeProfile.activityMultiplier) || 1.55));
-  }, [bmrKcal, activeProfile.activityMultiplier]);
+  const latestRecord = useMemo(() => {
+    if (!state.records.length) {
+      return { week: 1, weight: 80, bodyFat: 16, rhr: 62, waist: 84, abdomen: 86 };
+    }
+    return state.records[state.records.length - 1];
+  }, [state.records]);
 
-  const goalAdjustmentKcal = useMemo(() => {
-    if (activeProfile.goalMode === "cut") return -450;
-    if (activeProfile.goalMode === "bulk") return 350;
-    return -150;
-  }, [activeProfile.goalMode]);
+  const firstRecord = state.records[0] || latestRecord;
 
-  const todayDayOfWeek = new Date().getDay();
-  const isTodayRefeed = Array.isArray(activeProfile.refeedDays)
-    ? activeProfile.refeedDays.includes(todayDayOfWeek)
-    : false;
+  const skinfoldResults = useMemo(
+    () =>
+      calculateSkinfoldResults({
+        protocolId: state.skinfold.protocolId,
+        sex: state.profile.sex,
+        age: state.profile.age,
+        weightKg: latestRecord.weight,
+        folds: state.skinfold.folds
+      }),
+    [state.skinfold.protocolId, state.skinfold.folds, state.profile.sex, state.profile.age, latestRecord.weight]
+  );
 
-  const targetKcalToday = useMemo(() => {
-    const baseTarget = tdeeKcal + goalAdjustmentKcal;
-    const refeedBonus = isTodayRefeed ? Number(activeProfile.refeedDeltaKcal) || 400 : 0;
-    return Math.max(1200, Math.round(baseTarget + refeedBonus));
-  }, [tdeeKcal, goalAdjustmentKcal, isTodayRefeed, activeProfile.refeedDeltaKcal]);
+  const integratedComposition = useMemo(() => {
+    const w = Number(latestRecord.weight) || 80;
+    const bf =
+      latestRecord.bodyFat !== null && latestRecord.bodyFat !== undefined
+        ? Number(latestRecord.bodyFat)
+        : skinfoldResults.bodyFatPct || 16.0;
+    const fatMass = Number(((w * bf) / 100).toFixed(1));
+    const leanMass = Number((w - fatMass).toFixed(1));
+    return { weight: w, bodyFat: bf, fatMass, leanMass };
+  }, [latestRecord, skinfoldResults.bodyFatPct]);
 
-  const macroTargets = useMemo(() => {
-    const w = Number(activeProfile.weightKg) || 75;
-    const proteinGrams = Math.round(w * (Number(activeProfile.macrosSplit?.pPerKg) || 2.0));
-    const fatGrams = Math.round(w * (Number(activeProfile.macrosSplit?.gPerKg) || 0.8));
-    const usedKcal = proteinGrams * 4 + fatGrams * 9;
-    const carbGrams = Math.max(20, Math.round((targetKcalToday - usedKcal) / 4));
-    return { proteinGrams, carbGrams, fatGrams };
-  }, [activeProfile.weightKg, activeProfile.macrosSplit, targetKcalToday]);
+  const clinicalSim = useMemo(
+    () => simulateMultiAgentPK(state.clinicalStudy.agents, state.clinicalStudy.horizonWeeks),
+    [state.clinicalStudy.agents, state.clinicalStudy.horizonWeeks]
+  );
 
-  const mealTotals = useMemo(() => {
-    const foodMap = new Map(foods.map((f) => [f.id, f]));
-    let kcal = 0;
-    let p = 0;
-    let c = 0;
-    let g = 0;
+  const filteredEncyclopediaDrugs = useMemo(() => {
+    const cat = state.clinicalStudy.selectedCategory || 'all';
+    const q = (state.clinicalStudy.searchQuery || '').trim().toLowerCase();
+    return REGULATED_DRUGS.filter((d) => {
+      const matchCat = cat === 'all' || d.category === cat;
+      if (!matchCat) return false;
+      if (!q) return true;
+      return (
+        d.name.toLowerCase().includes(q) ||
+        d.brandNames.toLowerCase().includes(q) ||
+        d.drugClass.toLowerCase().includes(q)
+      );
+    });
+  }, [state.clinicalStudy.selectedCategory, state.clinicalStudy.searchQuery]);
 
-    (activeProfile.mealPlan || []).forEach((meal) => {
-      (meal.items || []).forEach((item) => {
-        const food = foodMap.get(item.foodId);
-        if (!food) return;
-        const factor = (Number(item.grams) || 0) / 100;
-        kcal += food.kcal * factor;
-        p += food.p * factor;
-        c += food.c * factor;
-        g += food.g * factor;
+  const selectedEncyclopediaDrug = useMemo(() => {
+    return (
+      filteredEncyclopediaDrugs.find((d) => d.id === state.clinicalStudy.selectedEncyclopediaDrugId) ||
+      filteredEncyclopediaDrugs[0] ||
+      REGULATED_DRUGS[0]
+    );
+  }, [filteredEncyclopediaDrugs, state.clinicalStudy.selectedEncyclopediaDrugId]);
+
+  const weeklyNutrition = useMemo(() => {
+    const weight = Number(latestRecord.weight) || 80;
+    const proteinG = Math.round(weight * (Number(state.nutrition.proteinGKg) || 2.1));
+    const fatG = Math.round(weight * (Number(state.nutrition.fatGKg) || 0.75));
+
+    const days = WEEK_DAYS.map((d) => {
+      const typeKey = state.nutrition.dayTypes[d.id] || 'moderate';
+      const cfg = DAY_TYPE_CONFIG[typeKey] || DAY_TYPE_CONFIG.moderate;
+      const carbsG = Math.round(weight * cfg.carbsGKg);
+      const kcal = proteinG * 4 + carbsG * 4 + fatG * 9;
+      return {
+        ...d,
+        typeKey,
+        typeLabel: cfg.label,
+        color: cfg.color,
+        badgeClass: cfg.bg,
+        proteinG,
+        carbsG,
+        fatG,
+        kcal
+      };
+    });
+
+    const avgKcal = Math.round(days.reduce((acc, d) => acc + d.kcal, 0) / days.length);
+    return { weight, proteinG, fatG, days, avgKcal };
+  }, [latestRecord.weight, state.nutrition]);
+
+  const activeNutritionDay = useMemo(
+    () =>
+      weeklyNutrition.days.find((d) => d.id === state.nutrition.selectedDayId) ||
+      weeklyNutrition.days[0],
+    [weeklyNutrition.days, state.nutrition.selectedDayId]
+  );
+
+  const mealPlanTotals = useMemo(() => {
+    let grandKcal = 0;
+    let grandP = 0;
+    let grandC = 0;
+    let grandF = 0;
+
+    const enrichedMeals = state.mealPlan.map((meal) => {
+      let mKcal = 0;
+      let mP = 0;
+      let mC = 0;
+      let mF = 0;
+
+      const items = meal.items.map((item) => {
+        const food = FOOD_DATABASE.find((f) => f.id === item.foodId) || FOOD_DATABASE[0];
+        const ratio = (Number(item.grams) || 0) / 100;
+        const kcal = food.kcal * ratio;
+        const p = food.protein * ratio;
+        const c = food.carbs * ratio;
+        const f = food.fat * ratio;
+
+        mKcal += kcal;
+        mP += p;
+        mC += c;
+        mF += f;
+
+        return {
+          ...item,
+          food,
+          kcal: Math.round(kcal),
+          protein: Number(p.toFixed(1)),
+          carbs: Number(c.toFixed(1)),
+          fat: Number(f.toFixed(1))
+        };
       });
+
+      grandKcal += mKcal;
+      grandP += mP;
+      grandC += mC;
+      grandF += mF;
+
+      return {
+        ...meal,
+        items,
+        totals: {
+          kcal: Math.round(mKcal),
+          protein: Math.round(mP),
+          carbs: Math.round(mC),
+          fat: Math.round(mF)
+        }
+      };
     });
 
     return {
-      kcal: Math.round(kcal),
-      p: Number(p.toFixed(1)),
-      c: Number(c.toFixed(1)),
-      g: Number(g.toFixed(1)),
+      meals: enrichedMeals,
+      grand: {
+        kcal: Math.round(grandKcal),
+        protein: Math.round(grandP),
+        carbs: Math.round(grandC),
+        fat: Math.round(grandF)
+      }
     };
-  }, [foods, activeProfile.mealPlan]);
+  }, [state.mealPlan]);
 
-  const caliperResult = useMemo(() => {
-    return calculateBodyFatFromFolds({
-      protocol: activeProfile.caliper?.protocol || "jp3",
-      sex: activeProfile.sex,
-      age: activeProfile.age,
-      folds: activeProfile.caliper?.folds || {},
-    });
-  }, [activeProfile.caliper, activeProfile.sex, activeProfile.age]);
+  const equivalenceCalc = useMemo(() => {
+    const groupFoods = FOOD_DATABASE.filter((f) => f.group === state.equivalence.group);
+    const baseFood = groupFoods.find((f) => f.id === state.equivalence.baseFoodId) || groupFoods[0];
+    const targetFood = groupFoods.find((f) => f.id === state.equivalence.targetFoodId) || groupFoods[1] || groupFoods[0];
+    const baseGrams = Math.max(0, Number(state.equivalence.baseGrams) || 0);
+    const isKcalMode = state.equivalence.mode === 'kcal';
+    const criterionKey = isKcalMode ? 'kcal' : state.equivalence.group;
 
-  const bodyCompositionSummary = useMemo(() => {
-    const weight = Number(activeProfile.weightKg) || 0;
-    const bfPct = Number(activeProfile.caliper?.lastBodyFatPct ?? caliperResult.bodyFatPct) || 0;
-    const fatKg = Number(((weight * bfPct) / 100).toFixed(1));
-    const leanKg = Number(Math.max(0, weight - fatKg).toFixed(1));
-    return { weight, bfPct, fatKg, leanKg };
-  }, [activeProfile.weightKg, activeProfile.caliper?.lastBodyFatPct, caliperResult.bodyFatPct]);
+    const baseCriterionAmount = (baseFood[criterionKey] * baseGrams) / 100;
+    const targetCriterionPer100 = Math.max(0.1, targetFood[criterionKey]);
+    const equivalentGrams = Math.round((baseCriterionAmount / targetCriterionPer100) * 100);
 
-  const filteredDrugs = useMemo(() => {
-    const q = drugSearch.trim().toLowerCase();
-    return DRUG_CATALOG.filter((d) => {
-      const matchesCat = drugCategoryFilter === "Todos" || d.category === drugCategoryFilter;
-      if (!matchesCat) return false;
-      if (!q) return true;
-      const inName = d.name.toLowerCase().includes(q);
-      const inNick = (d.nicknames || []).some((n) => n.toLowerCase().includes(q));
-      const inSum = d.summary.toLowerCase().includes(q);
-      return inName || inNick || inSum;
-    });
-  }, [drugSearch, drugCategoryFilter]);
-
-  const selectedDrug = useMemo(() => {
-    return DRUG_CATALOG.find((d) => d.id === selectedDrugId) || DRUG_CATALOG[0];
-  }, [selectedDrugId]);
-
-  const activeSimulatedEntries = useMemo(() => {
-    return (activeProfile.activeDrugs || [])
-      .filter((item) => item.enabled)
-      .map((entry) => {
-        const drug = DRUG_CATALOG.find((d) => d.id === entry.drugId);
-        if (!drug) return null;
-        return { entry, drug };
-      })
-      .filter(Boolean);
-  }, [activeProfile.activeDrugs]);
-
-  const simulationData = useMemo(() => {
-    const days = Array.from({ length: simHorizonDays + 1 }, (_, i) => i);
-
-    const perDrugSeries = activeSimulatedEntries.map(({ entry, drug }) => {
-      const offset = Number(entry.startDayOffset) || 0;
-      const points = days.map((day) => {
-        const effectiveDay = Math.max(0, day - offset);
-        const rawLevel = simulateConcentrationAtDay(
-          drug,
-          entry.doseMg,
-          entry.intervalDays || drug.intervalDays,
-          effectiveDay
-        );
-        return {
-          day,
-          level: Math.min(100, Number((rawLevel * (drug.potencyFactor || 1)).toFixed(1))),
-        };
-      });
-      return {
-        uid: entry.uid,
-        name: drug.name,
-        color: drug.color || "#22d3ee",
-        points,
-      };
+    const calcMacros = (food, g) => ({
+      kcal: Math.round((food.kcal * g) / 100),
+      protein: Number(((food.protein * g) / 100).toFixed(1)),
+      carbs: Number(((food.carbs * g) / 100).toFixed(1)),
+      fat: Number(((food.fat * g) / 100).toFixed(1))
     });
 
-    const combinedSeries = days.map((day) => {
-      let sum = 0;
-      perDrugSeries.forEach((s) => {
-        sum += s.points[day]?.level || 0;
-      });
-      return {
-        day,
-        level: Math.min(100, Number(sum.toFixed(1))),
-      };
-    });
-
-    return { perDrugSeries, combinedSeries };
-  }, [simHorizonDays, activeSimulatedEntries]);
-
-  const currentPkLevel = useMemo(() => {
-    if (!activeSimulatedEntries.length) return 0;
-    let sum = 0;
-    activeSimulatedEntries.forEach(({ entry, drug }) => {
-      const val = simulateConcentrationAtDay(
-        drug,
-        entry.doseMg,
-        entry.intervalDays || drug.intervalDays,
-        14
-      );
-      sum += val * (drug.potencyFactor || 1);
-    });
-    return Math.min(100, Number(sum.toFixed(1)));
-  }, [activeSimulatedEntries]);
-
-  const toggleRefeedDay = (dayIndex) => {
-    updateActiveProfile((prev) => {
-      const current = Array.isArray(prev.refeedDays) ? prev.refeedDays : [];
-      const next = current.includes(dayIndex)
-        ? current.filter((d) => d !== dayIndex)
-        : [...current, dayIndex].sort((a, b) => a - b);
-      return { ...prev, refeedDays: next };
-    });
-  };
-
-  const handleAddMeal = () => {
-    const title = newMealTitle.trim();
-    if (!title) return;
-    updateActiveProfile((prev) => ({
-      ...prev,
-      mealPlan: [
-        ...(prev.mealPlan || []),
-        { id: `m_${Date.now()}`, title, items: [] },
-      ],
-    }));
-    setNewMealTitle("");
-    notify("Nova refeição criada!");
-  };
-
-  const handleDeleteMeal = (mealId) => {
-    updateActiveProfile((prev) => ({
-      ...prev,
-      mealPlan: (prev.mealPlan || []).filter((m) => m.id !== mealId),
-    }));
-    notify("Refeição removida.");
-  };
-
-  const handleAddItemToMeal = (mealId) => {
-    const foodId = mealAddFoodId[mealId] || foods[0]?.id;
-    const grams = Math.max(1, Number(mealAddGrams[mealId]) || 100);
-    if (!foodId) return;
-    updateActiveProfile((prev) => ({
-      ...prev,
-      mealPlan: (prev.mealPlan || []).map((m) =>
-        m.id === mealId ? { ...m, items: [...(m.items || []), { foodId, grams }] } : m
-      ),
-    }));
-    notify("Alimento adicionado à refeição.");
-  };
-
-  const handleUpdateMealItemGrams = (mealId, itemIdx, grams) => {
-    updateActiveProfile((prev) => ({
-      ...prev,
-      mealPlan: (prev.mealPlan || []).map((m) => {
-        if (m.id !== mealId) return m;
-        const nextItems = (m.items || []).map((it, idx) =>
-          idx === itemIdx ? { ...it, grams: Math.max(0, Number(grams) || 0) } : it
-        );
-        return { ...m, items: nextItems };
-      }),
-    }));
-  };
-
-  const handleRemoveMealItem = (mealId, itemIdx) => {
-    updateActiveProfile((prev) => ({
-      ...prev,
-      mealPlan: (prev.mealPlan || []).map((m) => {
-        if (m.id !== mealId) return m;
-        return { ...m, items: (m.items || []).filter((_, idx) => idx !== itemIdx) };
-      }),
-    }));
-  };
-
-  const handleCreateCustomFood = (e) => {
-    e.preventDefault();
-    if (!customFood.name.trim()) return;
-    const created = {
-      id: `cf_${Date.now()}`,
-      name: customFood.name.trim(),
-      group: customFood.group,
-      kcal: Math.max(0, Number(customFood.kcal) || 0),
-      p: Math.max(0, Number(customFood.p) || 0),
-      c: Math.max(0, Number(customFood.c) || 0),
-      g: Math.max(0, Number(customFood.g) || 0),
+    return {
+      groupFoods,
+      baseFood,
+      targetFood,
+      baseGrams,
+      equivalentGrams,
+      baseMacros: calcMacros(baseFood, baseGrams),
+      targetMacros: calcMacros(targetFood, equivalentGrams)
     };
-    setFoods((prev) => [...prev, created]);
-    setCustomFood({ name: "", group: "Proteína", kcal: "", p: "", c: "", g: "" });
-    notify(`Alimento "${created.name}" adicionado à base!`);
+  }, [state.equivalence]);
+
+  const handleSwitchPreset = (presetKey) => {
+    const fresh = buildStateFromPreset(presetKey);
+    setState(fresh);
+    showToast(`Perfil "${PRESET_PROFILES[presetKey].label}" carregado.`);
   };
 
-  const handleSaveCaliperAssessment = () => {
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const weight = Number(activeProfile.weightKg) || 0;
-    const bf = caliperResult.bodyFatPct;
-    const leanKg = Number(Math.max(0, weight - (weight * bf) / 100).toFixed(1));
-    const waist = Number(activeProfile.measurements?.waist) || null;
-
-    updateActiveProfile((prev) => {
-      const nextHistory = [
-        ...(prev.history || []),
-        {
-          id: `h_${Date.now()}`,
-          date: todayIso,
-          weightKg: weight,
-          bodyFatPct: bf,
-          leanKg,
-          waistCm: waist,
-          note:
-            caliperNote.trim() ||
-            `Adipômetro (${(prev.caliper?.protocol || "jp3").toUpperCase()}) · Σ ${caliperResult.sumMm} mm · ${leanKg} kg MM`,
-        },
-      ];
-      return {
-        ...prev,
-        caliper: {
-          ...prev.caliper,
-          lastBodyFatPct: bf,
-          lastDensity: caliperResult.density,
-          lastSumMm: caliperResult.sumMm,
-        },
-        history: nextHistory,
-      };
-    });
-
-    setCaliperNote("");
-    notify("Avaliação do adipômetro salva e integrada ao histórico!");
-  };
-
-  const handleSendDrugToSimulator = (drug) => {
-    const exists = (activeProfile.activeDrugs || []).some((d) => d.drugId === drug.id);
-    if (!exists) {
-      updateActiveProfile((prev) => ({
-        ...prev,
-        activeDrugs: [
-          ...(prev.activeDrugs || []),
-          {
-            uid: `d_${Date.now()}`,
-            drugId: drug.id,
-            doseMg: drug.defaultDoseMg,
-            intervalDays: drug.intervalDays,
-            startDayOffset: 0,
-            enabled: true,
-          },
-        ],
-      }));
+  const handleSaveSkinfoldToHistory = () => {
+    if (!skinfoldResults.isValid) {
+      showToast('Preencha todas as pregas cutâneas do protocolo antes de salvar.', 'error');
+      return;
     }
-    setMainModule("clinical");
-    setSubTab((prev) => ({ ...prev, clinical: "simulator" }));
-    notify(`${drug.name} enviado ao simulador PK/PD.`);
-  };
+    const today = new Date().toISOString().slice(0, 10);
+    const nextWeek = (Number(latestRecord.week) || state.records.length) + 1;
+    const protoLabel =
+      state.skinfold.protocolId === 'jp7_all' ? 'Adipômetro JP7' : 'Adipômetro JP3';
 
-  const handleCreateProfile = (e) => {
-    e.preventDefault();
-    const cleanName = newProfileName.trim() || `Perfil ${profiles.length + 1}`;
-    const id = `p_${Date.now()}`;
-    const created = {
-      ...INITIAL_PROFILES[0],
-      id,
-      name: cleanName,
-      sex: newProfileSex,
-      age: Number(newProfileAge) || 30,
-      weightKg: Number(newProfileWeight) || 80,
-      targetWeightKg: Number(((Number(newProfileWeight) || 80) - 3).toFixed(1)),
-      heightCm: Number(newProfileHeight) || 175,
-      history: [
-        {
-          id: `h_${Date.now()}`,
-          date: new Date().toISOString().slice(0, 10),
-          weightKg: Number(newProfileWeight) || 80,
-          bodyFatPct: INITIAL_PROFILES[0].caliper.lastBodyFatPct,
-          leanKg: Number(((Number(newProfileWeight) || 80) * 0.85).toFixed(1)),
-          note: "Criação do perfil",
-        },
-      ],
+    const entry = {
+      id: `sf_${Date.now()}`,
+      date: today,
+      week: nextWeek,
+      weight: latestRecord.weight,
+      bodyFat: skinfoldResults.bodyFatPct,
+      rhr: latestRecord.rhr || null,
+      chest: latestRecord.chest || null,
+      waist: latestRecord.waist || null,
+      abdomen: latestRecord.abdomen || null,
+      hip: latestRecord.hip || null,
+      armR: latestRecord.armR || null,
+      armL: latestRecord.armL || null,
+      thighR: latestRecord.thighR || null,
+      thighL: latestRecord.thighL || null,
+      source: protoLabel,
+      note: `${protoLabel}: Σ=${skinfoldResults.sum}mm | Dc=${skinfoldResults.density} | MM=${skinfoldResults.leanMassKg}kg`
     };
-    setProfiles((prev) => [...prev, created]);
-    setActiveProfileId(id);
-    setNewProfileName("");
-    notify(`Perfil "${cleanName}" criado e ativado!`);
+
+    setState((prev) => ({
+      ...prev,
+      records: [...prev.records, entry]
+    }));
+    showToast(
+      `Avaliação salva (${skinfoldResults.bodyFatPct}% gordura) e sincronizada com a Visão Integrada!`
+    );
   };
 
-  const handleExportJson = () => {
-    const dataStr = JSON.stringify({ profiles, activeProfileId, foods }, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
+  const handleAddDrugToSimulator = (drug) => {
+    if (state.clinicalStudy.agents.length >= 3) {
+      showToast('Limite de 3 agentes simultâneos no simulador.', 'error');
+      return;
+    }
+    setState((prev) => ({
+      ...prev,
+      clinicalStudy: {
+        ...prev.clinicalStudy,
+        agents: [
+          ...prev.clinicalStudy.agents,
+          {
+            id: `ag_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+            drugId: drug.id,
+            dose: drug.defaultDose,
+            freqDays: drug.defaultFreqDays,
+            startWeek: 1
+          }
+        ]
+      }
+    }));
+    setActiveModule('clinical');
+    setActiveSubTab('simulator');
+    showToast(`${drug.name} (${drug.brandNames}) enviado para o Simulador Farmacocinético.`);
+  };
+
+  const handleExportJSON = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = `nexusprotocol-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `nexus-protocol-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    notify("Backup JSON exportado.");
+    showToast('Backup JSON exportado.');
   };
 
-  const handleImportJson = (e) => {
+  const handleImportJSON = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = (ev) => {
       try {
-        const parsed = JSON.parse(String(reader.result || "{}"));
-        if (Array.isArray(parsed.profiles) && parsed.profiles.length) {
-          setProfiles(parsed.profiles);
-          setActiveProfileId(parsed.activeProfileId || parsed.profiles[0].id);
-          if (Array.isArray(parsed.foods)) setFoods(parsed.foods);
-          notify("Dados restaurados do backup JSON!");
+        const parsed = JSON.parse(ev.target.result);
+        if (parsed && parsed.profile && parsed.clinicalStudy && parsed.nutrition && parsed.records) {
+          setState(parsed);
+          showToast('Backup JSON importado com sucesso!');
         } else {
-          notify("Arquivo JSON sem perfis válidos.");
+          showToast('Arquivo JSON inválido.', 'error');
         }
       } catch {
-        notify("Erro ao ler arquivo JSON.");
+        showToast('Erro ao ler arquivo JSON.', 'error');
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
-  const handleResetDemo = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setProfiles(INITIAL_PROFILES);
-    setActiveProfileId("p1");
-    setFoods(DEFAULT_FOODS);
-    notify("Dados restaurados para o padrão inicial.");
-  };
+  const handleAddCircumferenceRecord = (e) => {
+    e.preventDefault();
+    if (!newRecord.date || !newRecord.weight) {
+      showToast('Informe a data e o peso corporal (kg).', 'error');
+      return;
+    }
+    const toOpt = (v) =>
+      v !== '' && !Number.isNaN(parseFloat(v)) ? Number(parseFloat(v).toFixed(1)) : null;
 
-  const equivalenceResult = useMemo(() => {
-    const src = foods.find((f) => f.id === equivSourceId) || foods[0];
-    const dst = foods.find((f) => f.id === equivTargetId) || foods[1] || foods[0];
-    const grams = Math.max(0, Number(equivSourceGrams) || 0);
-    const srcKcal = (src.kcal * grams) / 100;
-    const dstGramsForKcal = dst.kcal > 0 ? Math.round((srcKcal / dst.kcal) * 100) : 0;
+    const nextWeek =
+      newRecord.week !== ''
+        ? Math.max(1, Math.round(Number(newRecord.week)))
+        : (Number(latestRecord.week) || state.records.length) + 1;
 
-    const srcCarbs = (src.c * grams) / 100;
-    const dstGramsForCarbs = dst.c > 0 ? Math.round((srcCarbs / dst.c) * 100) : 0;
-
-    const srcProt = (src.p * grams) / 100;
-    const dstGramsForProt = dst.p > 0 ? Math.round((srcProt / dst.p) * 100) : 0;
-
-    return {
-      src,
-      dst,
-      grams,
-      srcKcal: Math.round(srcKcal),
-      dstGramsForKcal,
-      srcCarbs: Number(srcCarbs.toFixed(1)),
-      dstGramsForCarbs,
-      srcProt: Number(srcProt.toFixed(1)),
-      dstGramsForProt,
+    const entry = {
+      id: `rec_${Date.now()}`,
+      date: newRecord.date,
+      week: nextWeek,
+      weight: Number(parseFloat(newRecord.weight).toFixed(1)),
+      bodyFat: toOpt(newRecord.bodyFat) ?? latestRecord.bodyFat ?? null,
+      rhr: newRecord.rhr !== '' ? Math.round(Number(newRecord.rhr)) : null,
+      chest: toOpt(newRecord.chest),
+      waist: toOpt(newRecord.waist),
+      abdomen: toOpt(newRecord.abdomen),
+      hip: toOpt(newRecord.hip),
+      armR: toOpt(newRecord.armR),
+      armL: toOpt(newRecord.armL),
+      thighR: toOpt(newRecord.thighR),
+      thighL: toOpt(newRecord.thighL),
+      source: 'Manual / Fita',
+      note: newRecord.note.trim() || `Avaliação Sem ${nextWeek}`
     };
-  }, [foods, equivSourceId, equivTargetId, equivSourceGrams]);
 
-  const activeSubTab = subTab[mainModule];
-  const visibleSites = useMemo(
-    () => Object.values(SKINFOLD_SITES).filter((s) => s.view === anatomyView),
-    [anatomyView]
-  );
-  const selectedSite = SKINFOLD_SITES[selectedSiteId] || SKINFOLD_SITES.peitoral;
+    setState((prev) => ({
+      ...prev,
+      records: [...prev.records, entry].sort((a, b) => a.date.localeCompare(b.date))
+    }));
 
-  const mainModules = [
-    { id: "overview", label: "Visão Integrada", icon: Layers, defaultSub: "integrated" },
-    { id: "nutrition", label: "Nutrição & Dieta", icon: Utensils, defaultSub: "cycle" },
-    { id: "anthropometry", label: "Medidas & Adipômetro", icon: Ruler, defaultSub: "caliper" },
-    { id: "clinical", label: "Clínica & Fármacos", icon: Pill, defaultSub: "encyclopedia" },
+    setNewRecord({
+      date: new Date().toISOString().slice(0, 10),
+      week: '',
+      weight: '',
+      bodyFat: '',
+      rhr: '',
+      chest: '',
+      waist: '',
+      abdomen: '',
+      hip: '',
+      armR: '',
+      armL: '',
+      thighR: '',
+      thighL: '',
+      note: ''
+    });
+    showToast('Avaliação antropométrica salva!');
+  };
+
+  const MEASURE_OPTIONS = [
+    { key: 'weight', label: 'Peso Corporal', unit: 'kg', color: '#00e5ff' },
+    { key: 'bodyFat', label: '% Gordura', unit: '%', color: '#14b8a6' },
+    { key: 'rhr', label: 'FCR (Repouso)', unit: 'bpm', color: '#f472b6' },
+    { key: 'abdomen', label: 'Abdômen', unit: 'cm', color: '#38bdf8' },
+    { key: 'waist', label: 'Cintura', unit: 'cm', color: '#06b6d4' },
+    { key: 'chest', label: 'Tórax', unit: 'cm', color: '#a78bfa' },
+    { key: 'hip', label: 'Quadril', unit: 'cm', color: '#fbbf24' },
+    { key: 'armR', label: 'Braço D', unit: 'cm', color: '#34d399' },
+    { key: 'thighR', label: 'Coxa D', unit: 'cm', color: '#60a5fa' }
   ];
 
-  const subTabsByModule = {
-    overview: [
-      { id: "integrated", label: "Painel Integrado & Evolução" },
-      { id: "backup", label: "Perfis & Backup JSON" },
-    ],
-    nutrition: [
-      { id: "cycle", label: "Ciclo Calórico & Refeed" },
-      { id: "mealplan", label: "Cardápio & Alimentos" },
-      { id: "equivalence", label: "Equivalência Alimentar" },
-    ],
-    anthropometry: [
-      { id: "caliper", label: "Adipômetro & Mapa Anatômico" },
-      { id: "body", label: "Peso, Massa Magra & Medidas" },
-    ],
-    clinical: [
-      { id: "encyclopedia", label: "Bulário & Estudos Clínicos" },
-      { id: "simulator", label: "Simulador PK/PD" },
-    ],
-  };
+  const currentMeasureMeta =
+    MEASURE_OPTIONS.find((m) => m.key === selectedMeasureMetric) || MEASURE_OPTIONS[0];
+
+  const activeProtocolObj =
+    SKINFOLD_PROTOCOLS[state.skinfold.protocolId] || SKINFOLD_PROTOCOLS.jp3_male;
+
+  const selectedSiteObj =
+    SKINFOLD_SITES[state.skinfold.selectedSiteId] || SKINFOLD_SITES[activeProtocolObj.sites[0]];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#071936] via-[#051024] to-[#030812] text-slate-100 pb-16">
-      {toastMsg && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-[#071D3F]/95 px-4 py-3 text-sm font-medium text-cyan-100 shadow-xl backdrop-blur">
-          <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0" />
-          <span>{toastMsg}</span>
+    <div
+      className="min-h-screen text-slate-100 selection:bg-[#00e5ff] selection:text-slate-950"
+      style={{
+        background: 'linear-gradient(145deg, #060d1f 0%, #08132b 52%, #0b1938 100%)'
+      }}
+    >
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-2xl border border-[#00e5ff]/40 bg-[#08132b]/95 px-4 py-3 text-xs font-medium text-white shadow-2xl backdrop-blur-xl">
+          {toast.type === 'error' ? (
+            <AlertCircle className="h-4 w-4 text-rose-400" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4 text-[#00e5ff]" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
 
-      {/* Cabeçalho fixo */}
-      <header className="sticky top-0 z-30 border-b border-cyan-500/15 bg-[#040C1B]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-300 shadow-inner">
-              <Activity className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-white">NexusProtocol</h1>
-                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
-                  PWA Clínico
-                </span>
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        {/* ================================================================= */}
+        {/* HEADER SUPERIOR COM SELETOR DE PERFIL & BACKUP JSON               */}
+        {/* ================================================================= */}
+        <header className="mb-5 rounded-3xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 shadow-2xl backdrop-blur-xl">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+            <div className="flex items-center gap-3.5">
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-lg shadow-cyan-500/25"
+                style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }}
+              >
+                <Sparkles className="h-6 w-6 text-slate-950" />
               </div>
-              <p className="text-xs text-slate-400">
-                Integração Metabólica, Antropometria & Farmacocinética
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-900/80 px-3 py-1.5 text-xs">
-              <User className="h-3.5 w-3.5 text-cyan-400" />
-              <select
-                value={activeProfile.id}
-                onChange={(e) => setActiveProfileId(e.target.value)}
-                className="bg-transparent text-slate-100 focus:outline-none"
-              >
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-slate-900 text-white">
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+                    {state.profile.appTitle}
+                  </h1>
+                  <span className="rounded-full border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-200">
+                    {state.profile.goalLabel}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Caso Ativo: <strong className="text-slate-200">{state.profile.userName}</strong> •{' '}
+                  {state.profile.sex === 'female' ? 'Feminino' : 'Masculino'}, {state.profile.age}{' '}
+                  anos
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={handleExportJson}
-              title="Exportar JSON"
-              className="flex items-center gap-1.5 rounded-xl border border-slate-700/70 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-cyan-400/40 hover:text-cyan-200 transition"
-            >
-              <Download className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Backup</span>
-            </button>
-          </div>
-        </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-xl border border-[#00e5ff]/30 bg-slate-950/80 px-3 py-1.5">
+                <UserCheck className="h-3.5 w-3.5 text-[#00e5ff]" />
+                <select
+                  value={state.activePresetId || 'caso_padrao'}
+                  onChange={(e) => handleSwitchPreset(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-cyan-200 outline-none"
+                  aria-label="Selecionar Perfil"
+                >
+                  {Object.values(PRESET_PROFILES).map((pr) => (
+                    <option key={pr.id} value={pr.id} className="bg-[#08132b] text-white">
+                      {pr.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {/* Nível 1: Módulos Principais */}
-        <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto no-scrollbar px-4 pb-2.5">
-          {mainModules.map((mod) => {
-            const Icon = mod.icon;
-            const active = mainModule === mod.id;
-            return (
               <button
-                key={mod.id}
-                onClick={() => handleSelectMainModule(mod.id, mod.defaultSub)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  active
-                    ? "border border-cyan-400/50 bg-gradient-to-r from-cyan-500/20 to-sky-500/15 text-cyan-200 shadow-sm"
-                    : "border border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700 hover:text-slate-200"
-                }`}
+                type="button"
+                onClick={handleExportJSON}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#00e5ff]/25 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
               >
-                <Icon className={`h-4 w-4 ${active ? "text-cyan-300" : "text-slate-500"}`} />
-                <span>{mod.label}</span>
+                <Download className="h-3.5 w-3.5" />
+                <span>Exportar JSON</span>
               </button>
-            );
-          })}
-        </nav>
 
-        {/* Nível 2: Sub-abas */}
-        <div className="border-t border-slate-800/80 bg-[#030A17]/90">
-          <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto no-scrollbar px-4 py-2">
-            {(subTabsByModule[mainModule] || []).map((tab) => {
-              const isSubActive = activeSubTab === tab.id;
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-teal-400/25 bg-teal-500/10 px-3 py-2 text-xs font-semibold text-teal-200 transition hover:bg-teal-500/20"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Importar</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleImportJSON}
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={() => handleSwitchPreset(state.activePresetId || 'caso_padrao')}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20"
+                title="Resetar perfil atual"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Resetar</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* ================================================================= */}
+        {/* NAVEGAÇÃO HIERÁRQUICA EM 2 NÍVEIS                                 */}
+        {/* ================================================================= */}
+        <div className="mb-6 space-y-2.5">
+          {/* NÍVEL 1: 4 Módulos Principais */}
+          <nav
+            aria-label="Módulos Principais"
+            className="grid grid-cols-2 gap-2 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/90 p-2 backdrop-blur-xl sm:grid-cols-4"
+          >
+            {NAVIGATION_MODULES.map((mod) => {
+              const Icon = mod.icon;
+              const isActive = activeModule === mod.id;
               return (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveSubTab(tab.id)}
-                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                    isSubActive
-                      ? "bg-cyan-400/15 text-cyan-300 border border-cyan-400/40"
-                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
+                  key={mod.id}
+                  type="button"
+                  onClick={() => handleSelectModule(mod.id)}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-extrabold transition sm:text-sm ${
+                    isActive
+                      ? 'text-slate-950 shadow-lg shadow-cyan-500/25'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
+                  style={
+                    isActive
+                      ? { background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }
+                      : undefined
+                  }
                 >
-                  {tab.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{mod.label}</span>
                 </button>
               );
             })}
-          </div>
-        </div>
-      </header>
+          </nav>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 pt-6">
-        {/* Faixa de Resumo */}
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/65 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Peso Atual</p>
-            <p className="mt-1 text-2xl font-bold text-white">
-              {bodyCompositionSummary.weight} <span className="text-sm font-normal text-slate-400">kg</span>
-            </p>
-            <p className="mt-1 text-xs text-cyan-300">
-              Meta: {activeProfile.targetWeightKg} kg
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/65 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">% Gordura (Adipômetro)</p>
-            <p className="mt-1 text-2xl font-bold text-cyan-300">
-              {bodyCompositionSummary.bfPct}%
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Massa magra: <span className="text-slate-200 font-medium">{bodyCompositionSummary.leanKg} kg</span>
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/65 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Meta Calórica Hoje</p>
-            <p className="mt-1 text-2xl font-bold text-white">
-              {targetKcalToday} <span className="text-sm font-normal text-slate-400">kcal</span>
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              {isTodayRefeed ? (
-                <span className="text-amber-300 font-medium">Dia de Refeed ativo</span>
-              ) : (
-                <span>Dieta: {mealTotals.kcal} kcal</span>
-              )}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/65 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Exposição PK Estimada</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-300">
-              {currentPkLevel}%
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              {activeSimulatedEntries.length} agente(s) ativo(s)
-            </p>
-          </div>
-        </section>
-
-        {/* MÓDULO 1: VISÃO INTEGRADA */}
-        {mainModule === "overview" && activeSubTab === "integrated" && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-cyan-400" />
-                    Cruzamento Longitudinal: Peso, % Gordura Real & Protocolo
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Cada avaliação salva no Adipômetro atualiza automaticamente a % de gordura, a massa magra e a linha do tempo integrada.
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleSelectMainModule("anthropometry", "caliper")}
-                  className="flex items-center gap-1 rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 transition"
-                >
-                  <span>Nova medição no Adipômetro</span>
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              <div className="mt-5 overflow-x-auto">
-                <svg viewBox="0 0 700 220" className="w-full min-w-[520px] rounded-xl bg-[#040C1B] p-3 border border-slate-800">
-                  <line x1="50" y1="180" x2="670" y2="180" stroke="#1e293b" strokeWidth="1" />
-                  <line x1="50" y1="30" x2="50" y2="180" stroke="#1e293b" strokeWidth="1" />
-
-                  {(() => {
-                    const hist = activeProfile.history || [];
-                    if (!hist.length) return null;
-                    const maxW = Math.max(...hist.map((h) => Number(h.weightKg) || 80), 90);
-                    const minW = Math.min(...hist.map((h) => Number(h.weightKg) || 70), 60);
-                    const spanW = Math.max(5, maxW - minW);
-
-                    const ptsWeight = hist.map((h, idx) => {
-                      const x = hist.length === 1 ? 360 : 70 + (idx * 570) / (hist.length - 1);
-                      const y = 170 - ((Number(h.weightKg) - minW) / spanW) * 125;
-                      return { x, y, item: h };
-                    });
-
-                    const ptsBf = hist
-                      .filter((h) => typeof h.bodyFatPct === "number" && !Number.isNaN(h.bodyFatPct))
-                      .map((h, idx, arr) => {
-                        const x = arr.length === 1 ? 360 : 70 + (idx * 570) / (arr.length - 1);
-                        const y = 170 - Math.min(1, Math.max(0, Number(h.bodyFatPct) / 40)) * 125;
-                        return { x, y, bf: h.bodyFatPct };
-                      });
-
-                    const polyWeight = ptsWeight.map((p) => `${p.x},${p.y}`).join(" ");
-                    const polyBf = ptsBf.map((p) => `${p.x},${p.y}`).join(" ");
-
-                    return (
-                      <>
-                        {ptsBf.length > 1 && (
-                          <polyline
-                            fill="none"
-                            stroke="#22d3ee"
-                            strokeWidth="2.5"
-                            strokeDasharray="5 4"
-                            points={polyBf}
-                          />
-                        )}
-                        {ptsWeight.length > 1 && (
-                          <polyline
-                            fill="none"
-                            stroke="#34d399"
-                            strokeWidth="3"
-                            points={polyWeight}
-                          />
-                        )}
-                        {ptsWeight.map((p, i) => (
-                          <g key={p.item.id || i}>
-                            <circle cx={p.x} cy={p.y} r="5" fill="#34d399" />
-                            <text x={p.x} y={p.y - 10} textAnchor="middle" fill="#a7f3d0" fontSize="11">
-                              {p.item.weightKg}kg
-                            </text>
-                            <text x={p.x} y="198" textAnchor="middle" fill="#94a3b8" fontSize="10">
-                              {String(p.item.date || "").slice(5)}
-                            </text>
-                          </g>
-                        ))}
-                        {ptsBf.map((p, i) => (
-                          <g key={`bf-${i}`}>
-                            <circle cx={p.x} cy={p.y} r="4.5" fill="#22d3ee" />
-                            <text x={p.x} y={p.y + 16} textAnchor="middle" fill="#67e8f9" fontSize="10">
-                              {p.bf}% BF
-                            </text>
-                          </g>
-                        ))}
-                      </>
-                    );
-                  })()}
-                </svg>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Peso Corporal (kg)
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" /> % Gordura Estimado/Adipômetro
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-              <h3 className="text-sm font-bold text-white mb-3">Registro Cronológico Integrado</h3>
-              <div className="divide-y divide-slate-800/80">
-                {[...(activeProfile.history || [])].reverse().map((entry) => (
-                  <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-xs">
-                    <div>
-                      <p className="font-semibold text-slate-100">{entry.note || "Registro clínico"}</p>
-                      <p className="text-slate-400 flex items-center gap-1 mt-0.5">
-                        <Calendar className="h-3 w-3 text-cyan-400" /> {entry.date}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 text-emerald-300 font-semibold">
-                        {entry.weightKg} kg
-                      </span>
-                      {typeof entry.bodyFatPct === "number" && (
-                        <span className="rounded-lg bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 text-cyan-300 font-semibold">
-                          {entry.bodyFatPct}% BF
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {mainModule === "overview" && activeSubTab === "backup" && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <User className="h-4 w-4 text-cyan-400" /> Perfis Clínicos & Novo Perfil
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {profiles.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setActiveProfileId(p.id)}
-                    className={`rounded-xl px-3.5 py-2 text-xs font-semibold border transition ${
-                      p.id === activeProfile.id
-                        ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200"
-                        : "border-slate-800 bg-slate-950/70 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    {p.name} ({p.weightKg} kg)
-                  </button>
-                ))}
-              </div>
-
-              <form onSubmit={handleCreateProfile} className="grid gap-3 sm:grid-cols-5 pt-2 text-xs">
-                <input
-                  type="text"
-                  placeholder="Nome do novo perfil"
-                  value={newProfileName}
-                  onChange={(e) => setNewProfileName(e.target.value)}
-                  className="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-                <select
-                  value={newProfileSex}
-                  onChange={(e) => setNewProfileSex(e.target.value)}
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                >
-                  <option value="male">Masculino</option>
-                  <option value="female">Feminino</option>
-                </select>
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="Peso (kg)"
-                  value={newProfileWeight}
-                  onChange={(e) => setNewProfileWeight(e.target.value)}
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-                <button
-                  type="submit"
-                  className="flex items-center justify-center gap-1 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3 py-2 font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
-                >
-                  <Plus className="h-4 w-4" /> Criar Perfil
-                </button>
-              </form>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Database className="h-4 w-4 text-cyan-400" /> Backup & Restauração Local (JSON)
-              </h2>
-              <p className="text-xs text-slate-400">
-                Todos os dados são salvos automaticamente no armazenamento local deste dispositivo. Exportar um arquivo JSON permite guardar cópias de segurança ou migrar entre aparelhos.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={handleExportJson}
-                  className="flex items-center gap-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-4 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
-                >
-                  <Download className="h-4 w-4" /> Baixar Backup (.json)
-                </button>
-
-                <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-slate-800 border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:border-cyan-400/40 transition">
-                  <Upload className="h-4 w-4 text-cyan-400" /> Importar Backup (.json)
-                  <input type="file" accept="application/json" onChange={handleImportJson} className="hidden" />
-                </label>
-
-                <button
-                  onClick={handleResetDemo}
-                  className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-2.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition"
-                >
-                  <RotateCcw className="h-4 w-4" /> Restaurar Padrão Inicial
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MÓDULO 2: NUTRIÇÃO & DIETA */}
-        {mainModule === "nutrition" && activeSubTab === "cycle" && (
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-cyan-400" /> Parâmetros Metabólicos, Macros & Refeed
-              </h2>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <label className="space-y-1">
-                  <span className="text-slate-400">Nome do Perfil</span>
-                  <input
-                    type="text"
-                    value={activeProfile.name}
-                    onChange={(e) => updateActiveProfile({ name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-400">Sexo Biológico</span>
-                  <select
-                    value={activeProfile.sex}
-                    onChange={(e) => updateActiveProfile({ sex: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  >
-                    <option value="male">Masculino</option>
-                    <option value="female">Feminino</option>
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-400">Peso Atual (kg)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={activeProfile.weightKg}
-                    onChange={(e) => updateActiveProfile({ weightKg: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-400">Meta de Peso (kg)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={activeProfile.targetWeightKg}
-                    onChange={(e) => updateActiveProfile({ targetWeightKg: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-400">Fator de Atividade</span>
-                  <select
-                    value={activeProfile.activityMultiplier}
-                    onChange={(e) => updateActiveProfile({ activityMultiplier: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  >
-                    <option value={1.2}>Sedentário (1.2x)</option>
-                    <option value={1.375}>Levemente ativo (1.375x)</option>
-                    <option value={1.55}>Moderadamente ativo (1.55x)</option>
-                    <option value={1.725}>Muito ativo (1.725x)</option>
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-400">Estratégia</span>
-                  <select
-                    value={activeProfile.goalMode}
-                    onChange={(e) => updateActiveProfile({ goalMode: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  >
-                    <option value="cut">Déficit / Cutting (-450 kcal)</option>
-                    <option value="recomp">Recomposição (-150 kcal)</option>
-                    <option value="bulk">Superávit / Ganho (+350 kcal)</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                    <Flame className="h-3.5 w-3.5 text-amber-400" /> Dias de Refeed na Semana
-                  </span>
-                  <span className="text-amber-300">+{activeProfile.refeedDeltaKcal || 400} kcal</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {WEEK_DAYS.map((d) => {
-                    const active = (activeProfile.refeedDays || []).includes(d.index);
-                    return (
-                      <button
-                        key={d.index}
-                        type="button"
-                        onClick={() => toggleRefeedDay(d.index)}
-                        className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition ${
-                          active
-                            ? "border-amber-400/60 bg-amber-500/20 text-amber-200"
-                            : "border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200"
-                        }`}
-                      >
-                        {d.short}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
-              <h2 className="text-base font-bold text-white">Metas Calculadas para Hoje</h2>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-xl bg-slate-950/80 p-3 border border-slate-800">
-                  <p className="text-slate-400">TMB Estimada (Mifflin-St Jeor)</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{bmrKcal} kcal</p>
-                </div>
-                <div className="rounded-xl bg-slate-950/80 p-3 border border-slate-800">
-                  <p className="text-slate-400">Gasto Energético Total (GET)</p>
-                  <p className="text-lg font-bold text-cyan-300 mt-0.5">{tdeeKcal} kcal</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4 space-y-2">
-                <p className="text-xs text-cyan-200 font-semibold">
-                  Alvo Diário ({isTodayRefeed ? "Dia de Refeed" : "Dia Base"})
-                </p>
-                <p className="text-2xl font-bold text-white">{targetKcalToday} kcal</p>
-                <div className="flex flex-wrap gap-3 text-xs text-slate-200 pt-1">
-                  <span>Proteína: <strong>{macroTargets.proteinGrams}g</strong></span>
-                  <span>Carboidratos: <strong>{macroTargets.carbGrams}g</strong></span>
-                  <span>Gorduras: <strong>{macroTargets.fatGrams}g</strong></span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <label className="space-y-1">
-                  <span className="text-slate-400">Proteína (g/kg)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={activeProfile.macrosSplit?.pPerKg ?? 2.2}
-                    onChange={(e) =>
-                      updateActiveProfile((prev) => ({
-                        ...prev,
-                        macrosSplit: { ...(prev.macrosSplit || {}), pPerKg: Number(e.target.value) },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-400">Gordura (g/kg)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={activeProfile.macrosSplit?.gPerKg ?? 0.8}
-                    onChange={(e) =>
-                      updateActiveProfile((prev) => ({
-                        ...prev,
-                        macrosSplit: { ...(prev.macrosSplit || {}), gPerKg: Number(e.target.value) },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {mainModule === "nutrition" && activeSubTab === "mealplan" && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-bold text-white">Cardápio Estruturado & Edição ao Vivo</h2>
-                  <p className="text-xs text-slate-400">
-                    Total Planejado: <strong className="text-cyan-300">{mealTotals.kcal} kcal</strong> · P {mealTotals.p}g · C {mealTotals.c}g · G {mealTotals.g}g
-                  </p>
-                </div>
-
-                <div className="flex gap-2 text-xs">
-                  <input
-                    type="text"
-                    placeholder="Nome da refeição (ex.: Ceia)"
-                    value={newMealTitle}
-                    onChange={(e) => setNewMealTitle(e.target.value)}
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddMeal}
-                    className="flex items-center gap-1 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3 py-1.5 font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Refeição
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {(activeProfile.mealPlan || []).map((meal) => (
-                  <div key={meal.id} className="rounded-xl border border-slate-800 bg-slate-950/75 p-4 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <h3 className="text-sm font-bold text-cyan-200">{meal.title}</h3>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMeal(meal.id)}
-                        className="text-slate-500 hover:text-rose-400 transition"
-                        title="Remover refeição"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <ul className="space-y-2 text-xs text-slate-300">
-                      {(meal.items || []).map((it, idx) => {
-                        const f = foods.find((x) => x.id === it.foodId);
-                        if (!f) return null;
-                        const kcalItem = Math.round((f.kcal * (Number(it.grams) || 0)) / 100);
-                        return (
-                          <li key={idx} className="flex items-center justify-between gap-2 border-b border-slate-900 pb-1.5">
-                            <span className="truncate flex-1">{f.name}</span>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <input
-                                type="number"
-                                value={it.grams}
-                                onChange={(e) => handleUpdateMealItemGrams(meal.id, idx, e.target.value)}
-                                className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-0.5 text-right text-white"
-                              />
-                              <span className="text-slate-400 w-14 text-right">{kcalItem} kcal</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveMealItem(meal.id, idx)}
-                                className="text-slate-500 hover:text-rose-400"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-
-                    <div className="flex gap-2 pt-1 text-xs">
-                      <select
-                        value={mealAddFoodId[meal.id] || foods[0]?.id || ""}
-                        onChange={(e) => setMealAddFoodId((prev) => ({ ...prev, [meal.id]: e.target.value }))}
-                        className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-white"
-                      >
-                        {foods.map((f) => (
-                          <option key={f.id} value={f.id} className="bg-slate-900">
-                            {f.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="g"
-                        value={mealAddGrams[meal.id] ?? 100}
-                        onChange={(e) => setMealAddGrams((prev) => ({ ...prev, [meal.id]: e.target.value }))}
-                        className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleAddItemToMeal(meal.id)}
-                        className="rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-2.5 py-1.5 font-semibold text-cyan-200 hover:bg-cyan-500/30"
-                      >
-                        + Item
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Cadastrar Alimento Personalizado */}
-            <form onSubmit={handleCreateCustomFood} className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-3">
-              <h3 className="text-sm font-bold text-white">Cadastrar Alimento Personalizado (base por 100g/ml)</h3>
-              <div className="grid gap-3 sm:grid-cols-6 text-xs">
-                <input
-                  type="text"
-                  placeholder="Nome do alimento"
-                  value={customFood.name}
-                  onChange={(e) => setCustomFood((prev) => ({ ...prev, name: e.target.value }))}
-                  className="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-                <input
-                  type="number"
-                  placeholder="Kcal / 100g"
-                  value={customFood.kcal}
-                  onChange={(e) => setCustomFood((prev) => ({ ...prev, kcal: e.target.value }))}
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="Prot (g)"
-                  value={customFood.p}
-                  onChange={(e) => setCustomFood((prev) => ({ ...prev, p: e.target.value }))}
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="Carb (g)"
-                  value={customFood.c}
-                  onChange={(e) => setCustomFood((prev) => ({ ...prev, c: e.target.value }))}
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-                <button
-                  type="submit"
-                  className="rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3 py-2 font-semibold text-cyan-200 hover:bg-cyan-500/30"
-                >
-                  Salvar Alimento
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {mainModule === "nutrition" && activeSubTab === "equivalence" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-            <h2 className="text-base font-bold text-white">Calculadora de Equivalência Alimentar</h2>
-            <div className="grid gap-3 sm:grid-cols-3 text-xs">
-              <label className="space-y-1">
-                <span className="text-slate-400">Alimento de Origem</span>
-                <select
-                  value={equivSourceId}
-                  onChange={(e) => setEquivSourceId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                >
-                  {foods.map((f) => (
-                    <option key={f.id} value={f.id} className="bg-slate-900">{f.name}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-slate-400">Quantidade Origem (g/ml)</span>
-                <input
-                  type="number"
-                  value={equivSourceGrams}
-                  onChange={(e) => setEquivSourceGrams(Number(e.target.value))}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                />
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-slate-400">Substituir Por</span>
-                <select
-                  value={equivTargetId}
-                  onChange={(e) => setEquivTargetId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                >
-                  {foods.map((f) => (
-                    <option key={f.id} value={f.id} className="bg-slate-900">{f.name}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 pt-2 text-xs">
-              <div className="rounded-xl border border-cyan-500/25 bg-slate-950 p-3.5">
-                <p className="text-slate-400">Equivalência Calórica ({equivalenceResult.srcKcal} kcal)</p>
-                <p className="text-xl font-bold text-cyan-300 mt-1">{equivalenceResult.dstGramsForKcal} g</p>
-              </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                <p className="text-slate-400">Equivalência em Carboidratos ({equivalenceResult.srcCarbs}g)</p>
-                <p className="text-xl font-bold text-white mt-1">{equivalenceResult.dstGramsForCarbs} g</p>
-              </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                <p className="text-slate-400">Equivalência em Proteínas ({equivalenceResult.srcProt}g)</p>
-                <p className="text-xl font-bold text-emerald-300 mt-1">{equivalenceResult.dstGramsForProt} g</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MÓDULO 3: MEDIDAS & ADIPÔMETRO */}
-        {mainModule === "anthropometry" && activeSubTab === "caliper" && (
-          <div className="grid gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-5 rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-white">Mapa Anatômico das Pregas</h2>
-                  <p className="text-xs text-slate-400">Toque em um ponto para ver o guia técnico</p>
-                </div>
-                <div className="flex rounded-xl border border-slate-700 bg-slate-950 p-0.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setAnatomyView("frontal")}
-                    className={`rounded-lg px-2.5 py-1 font-medium ${
-                      anatomyView === "frontal" ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400"
-                    }`}
-                  >
-                    Frente
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnatomyView("dorsal")}
-                    className={`rounded-lg px-2.5 py-1 font-medium ${
-                      anatomyView === "dorsal" ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400"
-                    }`}
-                  >
-                    Costas
-                  </button>
-                </div>
-              </div>
-
-                            <div className="relative mx-auto max-w-[260px] rounded-2xl border border-cyan-500/20 bg-[#040C1B] p-3">
-                <svg viewBox="0 0 100 100" className="w-full h-72 select-none">
-                  {/* Cabeça */}
-                  <circle
-                    cx="50"
-                    cy="15"
-                    r="8"
-                    fill="#0f294a"
-                    stroke="#22d3ee"
-                    strokeWidth="1.4"
-                  />
-
-                  {/* Tronco */}
-                  <rect
-                    x="36"
-                    y="25"
-                    width="28"
-                    height="34"
-                    rx="6"
-                    fill="#0f294a"
-                    stroke="#22d3ee"
-                    strokeWidth="1.4"
-                  />
-
-                  {/* Braço esquerdo */}
-                  <rect
-                    x="24"
-                    y="26"
-                    width="9"
-                    height="28"
-                    rx="4.5"
-                    fill="#0f294a"
-                    stroke="#22d3ee"
-                    strokeWidth="1.4"
-                  />
-
-                  {/* Braço direito */}
-                  <rect
-                    x="67"
-                    y="26"
-                    width="9"
-                    height="28"
-                    rx="4.5"
-                    fill="#0f294a"
-                    stroke="#22d3ee"
-                    strokeWidth="1.4"
-                  />
-
-                  {/* Perna esquerda */}
-                  <rect
-                    x="38"
-                    y="61"
-                    width="10"
-                    height="33"
-                    rx="5"
-                    fill="#0f294a"
-                    stroke="#22d3ee"
-                    strokeWidth="1.4"
-                  />
-
-                  {/* Perna direita */}
-                  <rect
-                    x="52"
-                    y="61"
-                    width="10"
-                    height="33"
-                    rx="5"
-                    fill="#0f294a"
-                    stroke="#22d3ee"
-                    strokeWidth="1.4"
-                  />
-
-                  {/* Pontos anatômicos */}
-                  {visibleSites.map((site) => {
-                    const isSelected = selectedSite.id === site.id;
-                    return (
-                      <g
-                        key={site.id}
-                        onClick={() => setSelectedSiteId(site.id)}
-                        className="cursor-pointer"
-                      >
-                        <circle
-                          cx={site.x}
-                          cy={site.y}
-                          r={isSelected ? 4.4 : 3.2}
-                          fill={isSelected ? "#22d3ee" : "#0284c7"}
-                          stroke="#ffffff"
-                          strokeWidth="1"
-                        />
-                      </g>
-                    );
-                  })}
-                </svg>
-              </div>
-
-              <div className="rounded-xl border border-cyan-500/20 bg-slate-950/80 p-3.5 space-y-1.5 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-cyan-300 text-sm">{selectedSite.label}</span>
-                  <span className="rounded-md bg-cyan-500/10 px-2 py-0.5 text-[11px] text-cyan-200">
-                    {selectedSite.protocol}
-                  </span>
-                </div>
-                <p className="text-slate-300"><strong>Eixo:</strong> {selectedSite.angle}</p>
-                <p className="text-slate-400"><strong>Localização:</strong> {selectedSite.location}</p>
-                <p className="text-slate-300"><strong>Pinçamento:</strong> {selectedSite.pinchGuide}</p>
-                <p className="text-amber-300/90"><strong>Evitar:</strong> {selectedSite.commonMistake}</p>
-              </div>
-            </div>
-
-            <div className="lg:col-span-7 rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-bold text-white">Calculadora de Adipômetro (Jackson & Pollock + Siri)</h2>
-                  <p className="text-xs text-slate-400">Insira as medidas em milímetros (mm)</p>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <select
-                    value={activeProfile.caliper?.protocol || "jp3"}
-                    onChange={(e) =>
-                      updateActiveProfile((prev) => ({
-                        ...prev,
-                        caliper: { ...prev.caliper, protocol: e.target.value },
-                      }))
-                    }
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
-                  >
-                    <option value="jp3">3 Dobras (JP3)</option>
-                    <option value="jp7">7 Dobras (JP7)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                {Object.values(SKINFOLD_SITES).map((site) => {
-                  const val = activeProfile.caliper?.folds?.[site.id] ?? "";
-                  return (
-                    <label
-                      key={site.id}
-                      onClick={() => setSelectedSiteId(site.id)}
-                      className={`rounded-xl border p-3 space-y-1 transition cursor-pointer ${
-                        selectedSite.id === site.id
-                          ? "border-cyan-400/50 bg-cyan-500/10"
-                          : "border-slate-800 bg-slate-950/70"
-                      }`}
-                    >
-                      <span className="text-slate-300 font-medium block">{site.label} (mm)</span>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={val}
-                        onChange={(e) => {
-                          const nextMm = e.target.value === "" ? "" : Number(e.target.value);
-                          updateActiveProfile((prev) => ({
-                            ...prev,
-                            caliper: {
-                              ...prev.caliper,
-                              folds: {
-                                ...(prev.caliper?.folds || {}),
-                                [site.id]: nextMm,
-                              },
-                            },
-                          }));
-                        }}
-                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-white"
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 rounded-xl border border-cyan-500/20 bg-slate-950 p-4 text-center">
-                <div>
-                  <p className="text-[11px] text-slate-400">Soma das Dobras</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{caliperResult.sumMm} mm</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-400">Densidade Corporal</p>
-                  <p className="text-lg font-bold text-slate-200 mt-0.5">{caliperResult.density}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-400">% Gordura (Siri)</p>
-                  <p className="text-xl font-bold text-cyan-300 mt-0.5">{caliperResult.bodyFatPct}%</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5">
-                <input
-                  type="text"
-                  placeholder="Observação opcional (ex.: avaliado em jejum, pós-ciclo...)"
-                  value={caliperNote}
-                  onChange={(e) => setCaliperNote(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveCaliperAssessment}
-                  className="rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-4 py-2 text-xs font-bold text-slate-950 hover:opacity-95 transition"
-                >
-                  Salvar & Integrar ao Painel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {mainModule === "anthropometry" && activeSubTab === "body" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-bold text-white">Composição Corporal & Circunferências (cm)</h2>
-              <div className="text-xs text-slate-300">
-                Gordura estimada: <strong className="text-cyan-300">{bodyCompositionSummary.fatKg} kg</strong> · Massa magra: <strong className="text-emerald-300">{bodyCompositionSummary.leanKg} kg</strong>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              {Object.entries(activeProfile.measurements || {}).map(([key, val]) => (
-                <label key={key} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-1">
-                  <span className="text-slate-400 capitalize block">{key} (cm)</span>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={val}
-                    onChange={(e) =>
-                      updateActiveProfile((prev) => ({
-                        ...prev,
-                        measurements: {
-                          ...(prev.measurements || {}),
-                          [key]: Number(e.target.value),
-                        },
-                      }))
-                    }
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-white"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* MÓDULO 4: CLÍNICA & FÁRMACOS */}
-        {mainModule === "clinical" && activeSubTab === "encyclopedia" && (
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-4 flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="h-4 w-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Buscar por princípio ativo ou nome comercial (ex.: Ozempic, Mounjaro, Durateston)..."
-                  value={drugSearch}
-                  onChange={(e) => setDrugSearch(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-3 py-2 text-xs text-white"
-                />
-              </div>
-              <select
-                value={drugCategoryFilter}
-                onChange={(e) => setDrugCategoryFilter(e.target.value)}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
-              >
-                <option value="Todos">Todas as categorias</option>
-                <option value="Peptídeos Metabólicos & Incretinas">Peptídeos Metabólicos & Incretinas</option>
-                <option value="Hormônios & Reposição (TRT)">Hormônios & Reposição (TRT)</option>
-                <option value="Eixo Tireoidiano">Eixo Tireoidiano</option>
-                <option value="Metabolismo Glicídico, Lipídico & Cardiometabólico">Metabolismo Cardiometabólico</option>
-              </select>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-12">
-              <div className="lg:col-span-4 space-y-2">
-                {filteredDrugs.map((drug) => {
-                  const isSel = selectedDrug.id === drug.id;
-                  return (
-                    <button
-                      key={drug.id}
-                      type="button"
-                      onClick={() => setSelectedDrugId(drug.id)}
-                      className={`w-full text-left rounded-xl border p-3.5 transition ${
-                        isSel
-                          ? "border-cyan-400/50 bg-cyan-500/15"
-                          : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-white">{drug.name}</span>
-                        <ChevronRight className="h-4 w-4 text-cyan-400" />
-                      </div>
-                      <p className="text-[11px] text-cyan-300 mt-0.5">
-                        {(drug.nicknames || []).join(" · ")}
-                      </p>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Meia-vida: ~{drug.halfLifeHours}h · {drug.route}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="lg:col-span-8 rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
-                      {selectedDrug.category}
-                    </span>
-                    <h2 className="text-xl font-bold text-white mt-0.5">{selectedDrug.name}</h2>
-                    <p className="text-xs text-slate-400">
-                      Nomes comerciais/referência: {(selectedDrug.nicknames || []).join(", ")} · Estado estacionário: ~{selectedDrug.steadyStateWeeks} sem
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSendDrugToSimulator(selectedDrug)}
-                    className="flex items-center gap-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3.5 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" /> Enviar ao Simulador PK/PD
-                  </button>
-                </div>
-
-                <div className="flex gap-2 text-xs">
-                  {[
-                    { id: "overview", label: "Visão & Mecanismo" },
-                    { id: "studies", label: "Estudos Clínicos" },
-                    { id: "safety", label: "Segurança & Exames" },
-                    { id: "timeline", label: "Linha do Tempo" },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setDrugDetailTab(t.id)}
-                      className={`rounded-lg px-3 py-1.5 font-medium border transition ${
-                        drugDetailTab === t.id
-                          ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200"
-                          : "border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {drugDetailTab === "overview" && (
-                  <div className="space-y-3 text-xs leading-relaxed text-slate-300">
-                    <div>
-                      <h3 className="font-bold text-white flex items-center gap-1.5 mb-1">
-                        <BookOpen className="h-3.5 w-3.5 text-cyan-400" /> Para que serve
-                      </h3>
-                      <p>{selectedDrug.summary}</p>
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white flex items-center gap-1.5 mb-1">
-                        <Info className="h-3.5 w-3.5 text-cyan-400" /> Como age no organismo
-                      </h3>
-                      <p>{selectedDrug.mechanism}</p>
-                    </div>
-                  </div>
-                )}
-
-                {drugDetailTab === "studies" && (
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 text-xs leading-relaxed text-slate-300 space-y-2">
-                    <h3 className="font-bold text-cyan-200 flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5 text-cyan-400" /> Evidências & Ensaios Clínicos
-                    </h3>
-                    <p>{selectedDrug.studies}</p>
-                  </div>
-                )}
-
-                {drugDetailTab === "safety" && (
-                  <div className="grid gap-3 sm:grid-cols-2 text-xs">
-                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">
-                      <h4 className="font-bold text-amber-300 flex items-center gap-1.5 mb-1.5">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Efeitos Adversos & Atenção
-                      </h4>
-                      <ul className="list-disc pl-4 space-y-1 text-slate-300">
-                        {(selectedDrug.sideEffects || []).map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5">
-                      <h4 className="font-bold text-rose-300 flex items-center gap-1.5 mb-1.5">
-                        <ShieldAlert className="h-3.5 w-3.5" /> Contraindicações & Monitoramento
-                      </h4>
-                      <ul className="list-disc pl-4 space-y-1 text-slate-300">
-                        {(selectedDrug.contraindications || []).map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 text-[11px] text-cyan-200">
-                        <strong>Exames:</strong> {(selectedDrug.monitoring || []).join(" · ")}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {drugDetailTab === "timeline" && selectedDrug.timelines && (
-                  <div className="space-y-2.5 text-xs">
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
-                      <p className="font-bold text-cyan-300 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Fase Inicial</p>
-                      <p className="text-slate-300 mt-1">{selectedDrug.timelines.early}</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
-                      <p className="font-bold text-cyan-300 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Fase Intermediária</p>
-                      <p className="text-slate-300 mt-1">{selectedDrug.timelines.mid}</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
-                      <p className="font-bold text-cyan-300 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Fase Consolidada</p>
-                      <p className="text-slate-300 mt-1">{selectedDrug.timelines.late}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {mainModule === "clinical" && activeSubTab === "simulator" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-bold text-white">Simulador Educacional de Exposição PK/PD</h2>
-                <p className="text-xs text-slate-400">
-                  Curva combinada e perfis individuais baseados em meia-vida, pico de absorção e intervalo de dose.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualCurves((v) => !v)}
-                  className={`rounded-xl border px-3 py-1.5 font-medium transition ${
-                    showIndividualCurves
-                      ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200"
-                      : "border-slate-700 bg-slate-950 text-slate-400"
-                  }`}
-                >
-                  {showIndividualCurves ? "Ocultar Individuais" : "Mostrar Individuais"}
-                </button>
-                <select
-                  value={simHorizonDays}
-                  onChange={(e) => setSimHorizonDays(Number(e.target.value))}
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
-                >
-                  <option value={28}>Janela de 28 dias</option>
-                  <option value={56}>Janela de 56 dias</option>
-                  <option value={84}>Janela de 84 dias</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <svg viewBox="0 0 700 200" className="w-full min-w-[500px] rounded-xl bg-[#040C1B] border border-slate-800 p-3">
-                <line x1="45" y1="165" x2="675" y2="165" stroke="#1e293b" strokeWidth="1" />
-                <line x1="45" y1="25" x2="45" y2="165" stroke="#1e293b" strokeWidth="1" />
-
-                {showIndividualCurves &&
-                  simulationData.perDrugSeries.map((serie) => {
-                    if (!serie.points.length) return null;
-                    const pts = serie.points
-                      .map((pt, idx) => {
-                        const x = 50 + (idx * 615) / Math.max(1, serie.points.length - 1);
-                        const y = 160 - (pt.level / 100) * 130;
-                        return `${x},${y}`;
-                      })
-                      .join(" ");
-                    return (
-                      <polyline
-                        key={serie.uid}
-                        fill="none"
-                        stroke={serie.color}
-                        strokeWidth="1.8"
-                        strokeDasharray="4 3"
-                        opacity="0.85"
-                        points={pts}
-                      />
-                    );
-                  })}
-
-                {(() => {
-                  const comb = simulationData.combinedSeries;
-                  if (!comb.length) return null;
-                  const pts = comb
-                    .map((pt, idx) => {
-                      const x = 50 + (idx * 615) / Math.max(1, comb.length - 1);
-                      const y = 160 - (pt.level / 100) * 130;
-                      return `${x},${y}`;
-                    })
-                    .join(" ");
-                  return <polyline fill="none" stroke="#ffffff" strokeWidth="2.8" points={pts} />;
-                })()}
-              </svg>
-            </div>
-
-            <div className="flex flex-wrap gap-3 text-xs text-slate-300">
-              <span className="flex items-center gap-1.5 font-semibold text-white">
-                <span className="h-2.5 w-2.5 rounded-full bg-white" /> Exposição Combinada
+          {/* NÍVEL 2: Sub-abas em linha reta com scroll lateral suave */}
+          {currentModuleObj.subTabs.length > 1 && (
+            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-xl border border-[#00e5ff]/15 bg-slate-950/75 px-3 py-2 [scrollbar-width:thin] [scrollbar-color:rgba(0,229,255,0.4)_transparent]">
+              <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                {currentModuleObj.label}:
               </span>
-              {simulationData.perDrugSeries.map((s) => (
-                <span key={s.uid} className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} /> {s.name}
-                </span>
-              ))}
-            </div>
-
-            <div className="space-y-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Fármacos no Protocolo Simulado
-              </h3>
-              {(activeProfile.activeDrugs || []).map((entry) => {
-                const info = DRUG_CATALOG.find((d) => d.id === entry.drugId);
-                if (!info) return null;
+              {currentModuleObj.subTabs.map((sub) => {
+                const subActive = activeSubTab === sub.id;
                 return (
-                  <div
-                    key={entry.uid}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/75 p-3 text-xs"
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setActiveSubTab(sub.id)}
+                    className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+                      subActive
+                        ? 'border border-[#00e5ff]/50 bg-[#00e5ff]/20 text-cyan-200 shadow-sm'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    }`}
                   >
-                    <div>
-                      <p className="font-bold text-white flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: info.color || "#22d3ee" }} />
-                        {info.name}
-                      </p>
-                      <p className="text-slate-400">Meia-vida: ~{info.halfLifeHours}h · {info.route}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label className="flex items-center gap-1 text-slate-300">
-                        <span>Dose ({info.unit}):</span>
-                        <input
-                          type="number"
-                          step="0.05"
-                          value={entry.doseMg}
-                          onChange={(e) =>
-                            updateActiveProfile((prev) => ({
-                              ...prev,
-                              activeDrugs: prev.activeDrugs.map((x) =>
-                                x.uid === entry.uid ? { ...x, doseMg: Number(e.target.value) } : x
-                              ),
-                            }))
-                          }
-                          className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-white"
-                        />
-                      </label>
-                      <label className="flex items-center gap-1 text-slate-300">
-                        <span>Cada (dias):</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={entry.intervalDays}
-                          onChange={(e) =>
-                            updateActiveProfile((prev) => ({
-                              ...prev,
-                              activeDrugs: prev.activeDrugs.map((x) =>
-                                x.uid === entry.uid ? { ...x, intervalDays: Number(e.target.value) } : x
-                              ),
-                            }))
-                          }
-                          className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-white"
-                        />
-                      </label>
-                      <label className="flex items-center gap-1 text-slate-300">
-                        <span>Início (dia):</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={entry.startDayOffset || 0}
-                          onChange={(e) =>
-                            updateActiveProfile((prev) => ({
-                              ...prev,
-                              activeDrugs: prev.activeDrugs.map((x) =>
-                                x.uid === entry.uid ? { ...x, startDayOffset: Math.max(0, Number(e.target.value) || 0) } : x
-                              ),
-                            }))
-                          }
-                          className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-white"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateActiveProfile((prev) => ({
-                            ...prev,
-                            activeDrugs: prev.activeDrugs.filter((x) => x.uid !== entry.uid),
-                          }))
-                        }
-                        className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-1.5 text-rose-300 hover:bg-rose-500/20"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                    {sub.label}
+                  </button>
                 );
               })}
             </div>
+          )}
+        </div>
+
+        {/* ================================================================= */}
+        {/* MÓDULO 1: VISÃO INTEGRADA                                         */}
+        {/* ================================================================= */}
+        {activeModule === 'integrated' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-4 backdrop-blur-xl">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Peso Atual vs. Inicial</span>
+                  <Scale className="h-4 w-4 text-[#00e5ff]" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-extrabold text-white">
+                    {integratedComposition.weight.toFixed(1)} kg
+                  </span>
+                  <span className="text-xs font-bold text-[#00e5ff]">
+                    ({(integratedComposition.weight - firstRecord.weight).toFixed(1)} kg)
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Meta: <strong className="text-slate-200">{state.profile.targetWeight} kg</strong> •
+                  FCR: <strong className="text-teal-300">{latestRecord.rhr || '—'} bpm</strong>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-4 backdrop-blur-xl">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>% Gordura Real (Adipômetro)</span>
+                  <HeartPulse className="h-4 w-4 text-[#14b8a6]" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-extrabold text-teal-300">
+                    {integratedComposition.bodyFat.toFixed(1)}%
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    ({integratedComposition.fatMass} kg gorda)
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Massa Magra: <strong className="text-cyan-200">{integratedComposition.leanMass} kg</strong>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-4 backdrop-blur-xl">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Meta Calórica ({activeNutritionDay.short})</span>
+                  <Flame className="h-4 w-4 text-[#00e5ff]" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-extrabold text-white">
+                    {activeNutritionDay.kcal} kcal
+                  </span>
+                  <span className="text-xs font-semibold text-teal-300">
+                    {activeNutritionDay.typeLabel}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Média Semanal: <strong className="text-slate-200">{weeklyNutrition.avgKcal} kcal/d</strong>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-4 backdrop-blur-xl">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Agentes no Simulador Clínico</span>
+                  <Stethoscope className="h-4 w-4 text-[#00e5ff]" />
+                </div>
+                <div className="mt-2 truncate text-sm font-extrabold text-cyan-200">
+                  {clinicalSim.series.length
+                    ? clinicalSim.series.map((s) => `${s.drug.name} (${s.dose}${s.drug.unit})`).join(' + ')
+                    : 'Nenhum agente ativo'}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Horizonte: <strong className="text-slate-200">{clinicalSim.safeWeeks} semanas</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-white">
+                    Gráfico Multi-Camadas: Peso Corporal × % Gordura (Adipômetro) × Exposição Farmacológica
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Correlação longitudinal integrando medidas antropométricas reais com a cinética do protocolo ativo.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <span className="flex items-center gap-1.5 font-semibold text-[#00e5ff]">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#00e5ff]" /> Peso (kg)
+                  </span>
+                  <span className="flex items-center gap-1.5 font-semibold text-[#14b8a6]">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#14b8a6]" /> % Gordura (Adipômetro)
+                  </span>
+                  <span className="flex items-center gap-1.5 font-semibold text-violet-300">
+                    <span className="w-4 border-t-2 border-dashed border-violet-400" /> Exposição PK (%)
+                  </span>
+                </div>
+              </div>
+
+              <IntegratedOverviewChartSVG records={state.records} clinicalSim={clinicalSim} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="space-y-3 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl lg:col-span-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-white">
+                    Linha do Tempo Integrada (Marcos Antropométricos, Dieta & Titulação)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModule('measures');
+                      setActiveSubTab('skinfold');
+                    }}
+                    className="rounded-lg border border-teal-400/30 bg-teal-500/10 px-2.5 py-1 text-xs font-bold text-teal-200 hover:bg-teal-500/20"
+                  >
+                    + Nova Dobra
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {state.records.map((rec, idx) => (
+                    <div
+                      key={rec.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/65 px-3.5 py-2.5 text-xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-lg bg-[#00e5ff]/15 px-2.5 py-1 font-extrabold text-[#00e5ff]">
+                          Sem {rec.week || idx + 1}
+                        </span>
+                        <div>
+                          <span className="font-bold text-white">{rec.note}</span>
+                          <span className="block text-[11px] text-slate-400">
+                            {rec.date} • Fonte: {rec.source || 'Avaliação'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <span className="block font-extrabold text-[#00e5ff]">{rec.weight} kg</span>
+                          <span className="text-[11px] text-teal-300">
+                            {rec.bodyFat ? `${rec.bodyFat}% Gordura` : '—'}
+                          </span>
+                        </div>
+                        <div className="hidden text-[11px] text-slate-400 sm:block">
+                          Cintura: {rec.waist || '—'}cm
+                          <br />
+                          FCR: {rec.rhr || '—'}bpm
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-between space-y-4 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                <div className="space-y-3">
+                  <h3 className="text-base font-bold text-white">Acesso Rápido aos Módulos</h3>
+                  <p className="text-xs text-slate-400">
+                    Navegue diretamente para atualizar dobras cutâneas, ajustar refeições ou estudar a farmacologia clínica.
+                  </p>
+
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModule('measures');
+                        setActiveSubTab('skinfold');
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-left text-xs font-bold text-white transition hover:border-[#00e5ff]/40"
+                    >
+                      <span>Calcular Pregas no Adipômetro</span>
+                      <ChevronRight className="h-4 w-4 text-[#00e5ff]" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModule('clinical');
+                        setActiveSubTab('encyclopedia');
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-left text-xs font-bold text-white transition hover:border-[#00e5ff]/40"
+                    >
+                      <span>Consultar Bulário & Enciclopédia</span>
+                      <ChevronRight className="h-4 w-4 text-teal-400" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModule('nutrition');
+                        setActiveSubTab('mealplan');
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-left text-xs font-bold text-white transition hover:border-[#00e5ff]/40"
+                    >
+                      <span>Ajustar Cardápio & Macros do Dia</span>
+                      <ChevronRight className="h-4 w-4 text-[#00e5ff]" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#00e5ff]/25 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+                  <strong>Aderência do Cardápio ({activeNutritionDay.short}):</strong>{' '}
+                  {mealPlanTotals.grand.kcal} kcal planejadas de {activeNutritionDay.kcal} kcal meta (
+                  {Math.round((mealPlanTotals.grand.kcal / Math.max(1, activeNutritionDay.kcal)) * 100)}%).
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        <footer className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-3 text-[11px] text-slate-400">
-          Uso educacional e de apoio organizacional/antropométrico. Estimativas de % de gordura (Jackson & Pollock / Siri) e simulações PK/PD não substituem avaliação clínica, prescrição ou acompanhamento profissional individualizado.
-        </footer>
-      </main>
+        {/* ================================================================= */}
+        {/* MÓDULO 2: NUTRIÇÃO & DIETA                                        */}
+        {/* ================================================================= */}
+        {activeModule === 'nutrition' && (
+          <>
+            {activeSubTab === 'cycle' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-base font-bold text-white">
+                        Ciclo Semanal de Carboidratos & Dias de Refeed
+                      </h2>
+                      <p className="text-xs text-slate-400">
+                        Peso base sincronizado: <strong className="text-[#00e5ff]">{weeklyNutrition.weight} kg</strong> • Média semanal:{' '}
+                        <strong className="text-teal-300">{weeklyNutrition.avgKcal} kcal/dia</strong>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/75 px-3 py-1.5">
+                        <span className="text-xs text-slate-400">Proteína (g/kg):</span>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="1.0"
+                          max="3.5"
+                          value={state.nutrition.proteinGKg}
+                          onChange={(e) =>
+                            setState((prev) => ({
+                              ...prev,
+                              nutrition: { ...prev.nutrition, proteinGKg: Number(e.target.value) || 2.0 }
+                            }))
+                          }
+                          className="w-14 bg-transparent text-right text-xs font-bold text-[#00e5ff] outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/75 px-3 py-1.5">
+                        <span className="text-xs text-slate-400">Gordura (g/kg):</span>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0.4"
+                          max="1.5"
+                          value={state.nutrition.fatGKg}
+                          onChange={(e) =>
+                            setState((prev) => ({
+                              ...prev,
+                              nutrition: { ...prev.nutrition, fatGKg: Number(e.target.value) || 0.75 }
+                            }))
+                          }
+                          className="w-14 bg-transparent text-right text-xs font-bold text-teal-300 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+                    {weeklyNutrition.days.map((day) => {
+                      const isSelected = state.nutrition.selectedDayId === day.id;
+                      return (
+                        <div
+                          key={day.id}
+                          onClick={() =>
+                            setState((prev) => ({
+                              ...prev,
+                              nutrition: { ...prev.nutrition, selectedDayId: day.id }
+                            }))
+                          }
+                          className={`cursor-pointer rounded-2xl border p-3.5 transition ${
+                            isSelected
+                              ? 'border-[#00e5ff] bg-cyan-500/10 shadow-lg shadow-cyan-500/10'
+                              : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-white">{day.short}</span>
+                            {isSelected && (
+                              <span className="rounded bg-[#00e5ff] px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
+                                Ativo
+                              </span>
+                            )}
+                          </div>
+
+                          <select
+                            value={day.typeKey}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              setState((prev) => ({
+                                ...prev,
+                                nutrition: {
+                                  ...prev.nutrition,
+                                  dayTypes: { ...prev.nutrition.dayTypes, [day.id]: e.target.value }
+                                }
+                              }))
+                            }
+                            className={`mt-2 w-full rounded-lg border px-2 py-1 text-[11px] font-semibold outline-none ${day.badgeClass}`}
+                          >
+                            {Object.entries(DAY_TYPE_CONFIG).map(([k, cfg]) => (
+                              <option key={k} value={k} className="bg-[#08132b] text-white">
+                                {cfg.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="mt-3 text-lg font-extrabold text-white">{day.kcal} kcal</div>
+                          <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-300">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Proteína:</span>
+                              <span className="font-semibold text-teal-300">{day.proteinG}g</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Carbo:</span>
+                              <span className="font-semibold text-[#00e5ff]">{day.carbsG}g</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Gordura:</span>
+                              <span className="font-semibold text-amber-300">{day.fatG}g</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-base font-bold text-white">
+                        Distribuição Calórica Semanal por Macronutriente
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Clique em qualquer dia acima para sincronizar com o Cardápio Personalizado.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                      <span className="flex items-center gap-1.5 text-teal-300">
+                        <span className="h-2.5 w-2.5 rounded-full bg-teal-400" /> Proteína
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[#00e5ff]">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#00e5ff]" /> Carboidratos
+                      </span>
+                      <span className="flex items-center gap-1.5 text-amber-300">
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Gorduras
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-7 items-end gap-3 pt-4" style={{ height: 220 }}>
+                    {(() => {
+                      const maxKcal = Math.max(...weeklyNutrition.days.map((d) => d.kcal), 2500);
+                      return weeklyNutrition.days.map((day) => {
+                        const pKcal = day.proteinG * 4;
+                        const cKcal = day.carbsG * 4;
+                        const fKcal = day.fatG * 9;
+                        const totalH = Math.max(24, (day.kcal / maxKcal) * 165);
+                        const pPct = (pKcal / day.kcal) * 100;
+                        const cPct = (cKcal / day.kcal) * 100;
+                        const fPct = (fKcal / day.kcal) * 100;
+
+                        return (
+                          <div key={day.id} className="flex flex-col items-center gap-2">
+                            <span className="text-[11px] font-bold text-white">{day.kcal}</span>
+                            <div
+                              className="flex w-full max-w-[46px] flex-col-reverse overflow-hidden rounded-xl border border-white/10 shadow-md"
+                              style={{ height: totalH }}
+                            >
+                              <div style={{ height: `${pPct}%` }} className="bg-teal-400" />
+                              <div style={{ height: `${cPct}%` }} className="bg-[#00e5ff]" />
+                              <div style={{ height: `${fPct}%` }} className="bg-amber-400" />
+                            </div>
+                            <span className="text-xs font-semibold text-slate-300">{day.short}</span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSubTab === 'mealplan' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <PieChart className="h-5 w-5 text-[#00e5ff]" />
+                        <h2 className="text-base font-bold text-white">
+                          Cardápio Personalizado vs. Meta ({activeNutritionDay.label} — {activeNutritionDay.typeLabel})
+                        </h2>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        Configure horários, refeições e gramaturas com cálculo automático em tempo real.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={state.nutrition.selectedDayId}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            nutrition: { ...prev.nutrition, selectedDayId: e.target.value }
+                          }))
+                        }
+                        className="rounded-xl border border-[#00e5ff]/30 bg-slate-950/80 px-3 py-2 text-xs font-semibold text-cyan-100 outline-none"
+                      >
+                        {weeklyNutrition.days.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            Meta: {d.label} ({d.kcal} kcal)
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setState((prev) => ({
+                            ...prev,
+                            mealPlan: [
+                              ...prev.mealPlan,
+                              {
+                                id: `meal_${Date.now()}`,
+                                name: `Refeição ${prev.mealPlan.length + 1}`,
+                                time: '15:30',
+                                items: [{ id: `it_${Date.now()}`, foodId: 'frango', grams: 150 }]
+                              }
+                            ]
+                          }));
+                          showToast('Nova refeição adicionada.');
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-slate-950"
+                        style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Adicionar Refeição
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      { label: 'Calorias Totais', cur: mealPlanTotals.grand.kcal, target: activeNutritionDay.kcal, unit: 'kcal' },
+                      { label: 'Proteínas', cur: mealPlanTotals.grand.protein, target: activeNutritionDay.proteinG, unit: 'g' },
+                      { label: 'Carboidratos', cur: mealPlanTotals.grand.carbs, target: activeNutritionDay.carbsG, unit: 'g' },
+                      { label: 'Gorduras', cur: mealPlanTotals.grand.fat, target: activeNutritionDay.fatG, unit: 'g' }
+                    ].map((bar) => {
+                      const pct = Math.min(100, Math.round((bar.cur / Math.max(1, bar.target)) * 100));
+                      const over = bar.cur > bar.target * 1.08;
+                      return (
+                        <div key={bar.label} className="rounded-xl border border-slate-800 bg-slate-950/65 p-3.5">
+                          <div className="flex justify-between text-xs text-slate-400">
+                            <span>{bar.label}</span>
+                            <span className={`font-bold ${over ? 'text-amber-300' : 'text-[#00e5ff]'}`}>{pct}%</span>
+                          </div>
+                          <div className="mt-1 text-base font-extrabold text-white">
+                            {bar.cur}{' '}
+                            <span className="text-xs font-normal text-slate-400">
+                              / {bar.target} {bar.unit}
+                            </span>
+                          </div>
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${pct}%`,
+                                background: over
+                                  ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                  : 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                  {mealPlanTotals.meals.map((meal) => (
+                    <div
+                      key={meal.id}
+                      className="flex flex-col justify-between rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl"
+                    >
+                      <div>
+                        <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                          <div className="flex flex-1 items-center gap-2">
+                            <input
+                              type="time"
+                              value={meal.time}
+                              onChange={(e) =>
+                                setState((prev) => ({
+                                  ...prev,
+                                  mealPlan: prev.mealPlan.map((m) =>
+                                    m.id === meal.id ? { ...m, time: e.target.value } : m
+                                  )
+                                }))
+                              }
+                              className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs font-bold text-[#00e5ff] outline-none focus:border-[#00e5ff]"
+                            />
+                            <input
+                              type="text"
+                              value={meal.name}
+                              onChange={(e) =>
+                                setState((prev) => ({
+                                  ...prev,
+                                  mealPlan: prev.mealPlan.map((m) =>
+                                    m.id === meal.id ? { ...m, name: e.target.value } : m
+                                  )
+                                }))
+                              }
+                              className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-bold text-white outline-none hover:border-slate-700 focus:border-[#00e5ff] focus:bg-slate-950/70"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setState((prev) => ({
+                                ...prev,
+                                mealPlan: prev.mealPlan.filter((m) => m.id !== meal.id)
+                              }))
+                            }
+                            className="rounded-lg p-1.5 text-rose-300 hover:bg-rose-500/15"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-2.5">
+                          {meal.items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800/90 bg-slate-950/60 p-2.5"
+                            >
+                              <select
+                                value={item.foodId}
+                                onChange={(e) =>
+                                  setState((prev) => ({
+                                    ...prev,
+                                    mealPlan: prev.mealPlan.map((m) =>
+                                      m.id === meal.id
+                                        ? {
+                                            ...m,
+                                            items: m.items.map((it) =>
+                                              it.id === item.id ? { ...it, foodId: e.target.value } : it
+                                            )
+                                          }
+                                        : m
+                                    )
+                                  }))
+                                }
+                                className="min-w-[165px] flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                              >
+                                {FOOD_DATABASE.map((f) => (
+                                  <option key={f.id} value={f.id}>
+                                    {f.name}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="5"
+                                  value={item.grams}
+                                  onChange={(e) =>
+                                    setState((prev) => ({
+                                      ...prev,
+                                      mealPlan: prev.mealPlan.map((m) =>
+                                        m.id === meal.id
+                                          ? {
+                                              ...m,
+                                              items: m.items.map((it) =>
+                                                it.id === item.id
+                                                  ? { ...it, grams: Math.max(0, Number(e.target.value) || 0) }
+                                                  : it
+                                              )
+                                            }
+                                          : m
+                                      )
+                                    }))
+                                  }
+                                  className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-right text-xs font-bold text-white outline-none focus:border-[#00e5ff]"
+                                />
+                                <span className="text-xs text-slate-400">g</span>
+                              </div>
+
+                              <div className="w-full text-[11px] text-slate-400 sm:ml-auto sm:w-auto">
+                                {item.kcal} kcal • P:{item.protein}g • C:{item.carbs}g • G:{item.fat}g
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setState((prev) => ({
+                                    ...prev,
+                                    mealPlan: prev.mealPlan.map((m) =>
+                                      m.id === meal.id
+                                        ? { ...m, items: m.items.filter((it) => it.id !== item.id) }
+                                        : m
+                                    )
+                                  }))
+                                }
+                                className="rounded-lg p-1 text-slate-400 hover:bg-rose-500/15 hover:text-rose-300"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setState((prev) => ({
+                              ...prev,
+                              mealPlan: prev.mealPlan.map((m) =>
+                                m.id === meal.id
+                                  ? {
+                                      ...m,
+                                      items: [
+                                        ...m.items,
+                                        {
+                                          id: `it_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+                                          foodId: 'arroz_branco',
+                                          grams: 100
+                                        }
+                                      ]
+                                    }
+                                  : m
+                              )
+                            }))
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#00e5ff]/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Adicionar Alimento
+                        </button>
+
+                        <div className="text-xs font-bold text-[#00e5ff]">
+                          Subtotal: {meal.totals.kcal} kcal • P:{meal.totals.protein}g • C:{meal.totals.carbs}g • G:{meal.totals.fat}g
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeSubTab === 'equivalence' && (
+              <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-white">
+                      Calculadora Inteligente de Equivalência Alimentar
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      Substitua alimentos mantendo equivalência exata do macronutriente dominante ou isocaloria.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex rounded-xl border border-slate-700 bg-slate-950 p-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setState((prev) => ({
+                            ...prev,
+                            equivalence: { ...prev.equivalence, mode: 'macro' }
+                          }))
+                        }
+                        className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                          state.equivalence.mode === 'macro' ? 'bg-[#00e5ff] text-slate-950' : 'text-slate-300'
+                        }`}
+                      >
+                        Por Macro
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setState((prev) => ({
+                            ...prev,
+                            equivalence: { ...prev.equivalence, mode: 'kcal' }
+                          }))
+                        }
+                        className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                          state.equivalence.mode === 'kcal' ? 'bg-[#00e5ff] text-slate-950' : 'text-slate-300'
+                        }`}
+                      >
+                        Isocalórico
+                      </button>
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      {[
+                        { key: 'carbs', label: 'Carboidratos' },
+                        { key: 'protein', label: 'Proteínas' },
+                        { key: 'fat', label: 'Gorduras' }
+                      ].map((g) => (
+                        <button
+                          key={g.key}
+                          type="button"
+                          onClick={() => {
+                            const foods = FOOD_DATABASE.filter((f) => f.group === g.key);
+                            setState((prev) => ({
+                              ...prev,
+                              equivalence: {
+                                ...prev.equivalence,
+                                group: g.key,
+                                baseFoodId: foods[0]?.id || '',
+                                baseGrams: g.key === 'fat' ? 15 : 150,
+                                targetFoodId: foods[1]?.id || foods[0]?.id || ''
+                              }
+                            }));
+                          }}
+                          className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                            state.equivalence.group === g.key
+                              ? 'bg-[#14b8a6] text-slate-950'
+                              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 items-center gap-4 lg:grid-cols-11">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/65 p-4 lg:col-span-5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#00e5ff]">
+                      1. Alimento Original
+                    </span>
+                    <select
+                      value={equivalenceCalc.baseFood.id}
+                      onChange={(e) =>
+                        setState((prev) => ({
+                          ...prev,
+                          equivalence: { ...prev.equivalence, baseFoodId: e.target.value }
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-[#00e5ff]"
+                    >
+                      {equivalenceCalc.groupFoods.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <label className="text-xs text-slate-400">Quantidade (g):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="5"
+                        value={state.equivalence.baseGrams}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            equivalence: {
+                              ...prev.equivalence,
+                              baseGrams: Math.max(0, Number(e.target.value) || 0)
+                            }
+                          }))
+                        }
+                        className="w-28 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-right text-sm font-bold text-white outline-none focus:border-[#00e5ff]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center lg:col-span-1">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#00e5ff]/30 bg-cyan-500/15 text-[#00e5ff]">
+                      <ArrowRightLeft className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#00e5ff]/30 bg-cyan-500/5 p-4 lg:col-span-5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-teal-300">
+                      2. Alimento Substituto
+                    </span>
+                    <select
+                      value={equivalenceCalc.targetFood.id}
+                      onChange={(e) =>
+                        setState((prev) => ({
+                          ...prev,
+                          equivalence: { ...prev.equivalence, targetFoodId: e.target.value }
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-[#00e5ff]"
+                    >
+                      {equivalenceCalc.groupFoods.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="mt-3 flex items-baseline justify-between">
+                      <span className="text-xs text-slate-300">Porção equivalente:</span>
+                      <span className="text-2xl font-extrabold text-[#00e5ff]">
+                        {equivalenceCalc.equivalentGrams} g
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400">
+                        <th className="py-2">Alimento</th>
+                        <th className="py-2">Porção</th>
+                        <th className="py-2">Calorias</th>
+                        <th className="py-2">Proteínas</th>
+                        <th className="py-2">Carboidratos</th>
+                        <th className="py-2">Gorduras</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/70">
+                      <tr>
+                        <td className="py-2.5 font-semibold text-white">{equivalenceCalc.baseFood.name}</td>
+                        <td className="py-2.5 font-bold text-[#00e5ff]">{equivalenceCalc.baseGrams} g</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.baseMacros.kcal} kcal</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.baseMacros.protein} g</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.baseMacros.carbs} g</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.baseMacros.fat} g</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 font-semibold text-teal-200">{equivalenceCalc.targetFood.name}</td>
+                        <td className="py-2.5 font-extrabold text-teal-300">{equivalenceCalc.equivalentGrams} g</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.targetMacros.kcal} kcal</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.targetMacros.protein} g</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.targetMacros.carbs} g</td>
+                        <td className="py-2.5 text-slate-200">{equivalenceCalc.targetMacros.fat} g</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ================================================================= */}
+        {/* MÓDULO 3: MEDIDAS & ADIPÔMETRO                                    */}
+        {/* ================================================================= */}
+        {activeModule === 'measures' && (
+          <>
+            {activeSubTab === 'circumferences' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <form
+                    onSubmit={handleAddCircumferenceRecord}
+                    className="space-y-3 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-[#00e5ff]" />
+                      <h2 className="text-base font-bold text-white">Novo Registro Antropométrico</h2>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-300">Data*</label>
+                        <input
+                          type="date"
+                          value={newRecord.date}
+                          onChange={(e) => setNewRecord((p) => ({ ...p, date: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-300">Semana</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={`${(Number(latestRecord.week) || state.records.length) + 1}`}
+                          value={newRecord.week}
+                          onChange={(e) => setNewRecord((p) => ({ ...p, week: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="mb-1 block text-[11px] text-slate-300">Peso (kg)*</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="79.2"
+                          value={newRecord.weight}
+                          onChange={(e) => setNewRecord((p) => ({ ...p, weight: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] text-slate-300">% Gordura</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="14.6"
+                          value={newRecord.bodyFat}
+                          onChange={(e) => setNewRecord((p) => ({ ...p, bodyFat: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] text-slate-300">FCR (bpm)</label>
+                        <input
+                          type="number"
+                          placeholder="59"
+                          value={newRecord.rhr}
+                          onChange={(e) => setNewRecord((p) => ({ ...p, rhr: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-800 pt-2">
+                      <span className="mb-2 block text-xs font-semibold text-[#00e5ff]">
+                        Circunferências Corporais (cm)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { key: 'chest', label: 'Tórax', ph: '103.2' },
+                          { key: 'waist', label: 'Cintura', ph: '81.8' },
+                          { key: 'abdomen', label: 'Abdômen', ph: '83.6' },
+                          { key: 'hip', label: 'Quadril', ph: '96.4' },
+                          { key: 'armR', label: 'Braço D', ph: '37.5' },
+                          { key: 'armL', label: 'Braço E', ph: '37.3' },
+                          { key: 'thighR', label: 'Coxa D', ph: '57.6' },
+                          { key: 'thighL', label: 'Coxa E', ph: '57.5' }
+                        ].map((f) => (
+                          <div key={f.key}>
+                            <label className="mb-0.5 block text-[11px] text-slate-400">{f.label}</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder={f.ph}
+                              value={newRecord[f.key]}
+                              onChange={(e) => setNewRecord((p) => ({ ...p, [f.key]: e.target.value }))}
+                              className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-300">Observação</label>
+                      <input
+                        type="text"
+                        placeholder="Ex.: jejum matinal"
+                        value={newRecord.note}
+                        onChange={(e) => setNewRecord((p) => ({ ...p, note: e.target.value }))}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950/75 px-3 py-1.5 text-xs text-white outline-none focus:border-[#00e5ff]"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-950"
+                      style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Salvar Avaliação
+                    </button>
+                  </form>
+
+                  <div className="space-y-5 lg:col-span-2">
+                    <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                      <div className="mb-3">
+                        <h2 className="text-base font-bold text-white">
+                          Evolução: {currentMeasureMeta.label} ({currentMeasureMeta.unit})
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                          Alterne entre peso, % gordura, FCR e circunferências regionais.
+                        </p>
+                      </div>
+
+                      <div className="mb-4 flex flex-wrap gap-1.5">
+                        {MEASURE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => setSelectedMeasureMetric(opt.key)}
+                            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                              selectedMeasureMetric === opt.key
+                                ? 'bg-[#00e5ff] text-slate-950'
+                                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <MetricTrendSVG
+                        records={state.records}
+                        metricKey={currentMeasureMeta.key}
+                        label={currentMeasureMeta.label}
+                        unit={currentMeasureMeta.unit}
+                        color={currentMeasureMeta.color}
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                      <h3 className="mb-3 text-sm font-bold text-white">Histórico Completo</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[740px] text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-800 text-slate-400">
+                              <th className="py-2">Sem / Data</th>
+                              <th className="py-2">Peso</th>
+                              <th className="py-2">BF%</th>
+                              <th className="py-2">FCR</th>
+                              <th className="py-2">Tórax</th>
+                              <th className="py-2">Cintura</th>
+                              <th className="py-2">Abdômen</th>
+                              <th className="py-2">Quadril</th>
+                              <th className="py-2">Braço D/E</th>
+                              <th className="py-2">Coxa D/E</th>
+                              <th className="py-2 text-right">Ação</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/70">
+                            {[...state.records].reverse().map((r) => (
+                              <tr key={r.id}>
+                                <td className="py-2 font-semibold text-white">
+                                  S{r.week || '?'} • {r.date}
+                                </td>
+                                <td className="py-2 font-bold text-[#00e5ff]">{r.weight} kg</td>
+                                <td className="py-2 font-bold text-teal-300">
+                                  {r.bodyFat ? `${r.bodyFat}%` : '—'}
+                                </td>
+                                <td className="py-2 text-slate-300">{r.rhr || '—'}</td>
+                                <td className="py-2 text-slate-300">{r.chest || '—'}</td>
+                                <td className="py-2 text-cyan-200">{r.waist || '—'}</td>
+                                <td className="py-2 text-cyan-200">{r.abdomen || '—'}</td>
+                                <td className="py-2 text-slate-300">{r.hip || '—'}</td>
+                                <td className="py-2 text-slate-300">
+                                  {r.armR || '—'} / {r.armL || '—'}
+                                </td>
+                                <td className="py-2 text-slate-300">
+                                  {r.thighR || '—'} / {r.thighL || '—'}
+                                </td>
+                                <td className="py-2 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (state.records.length <= 1) return;
+                                      setState((prev) => ({
+                                        ...prev,
+                                        records: prev.records.filter((item) => item.id !== r.id)
+                                      }));
+                                    }}
+                                    className="rounded-lg p-1 text-rose-300 hover:bg-rose-500/15"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSubTab === 'skinfold' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                  <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Crosshair className="h-5 w-5 text-[#00e5ff]" />
+                        <h2 className="text-base font-bold text-white">
+                          Calculadora de Adipômetro (Jackson & Pollock + Equação de Siri)
+                        </h2>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        {activeProtocolObj.description}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <select
+                        value={state.skinfold.protocolId}
+                        onChange={(e) => {
+                          const pid = e.target.value;
+                          const proto = SKINFOLD_PROTOCOLS[pid];
+                          setState((prev) => ({
+                            ...prev,
+                            profile: {
+                              ...prev.profile,
+                              sex:
+                                pid === 'jp3_female'
+                                  ? 'female'
+                                  : pid === 'jp3_male'
+                                  ? 'male'
+                                  : prev.profile.sex
+                            },
+                            skinfold: {
+                              ...prev.skinfold,
+                              protocolId: pid,
+                              selectedSiteId: proto.sites[0]
+                            }
+                          }));
+                        }}
+                        className="rounded-xl border border-[#00e5ff]/35 bg-slate-950/90 px-3 py-2 text-xs font-bold text-cyan-200 outline-none"
+                      >
+                        {Object.values(SKINFOLD_PROTOCOLS).map((pr) => (
+                          <option key={pr.id} value={pr.id} className="bg-[#08132b] text-white">
+                            {pr.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={state.profile.sex}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            profile: { ...prev.profile, sex: e.target.value }
+                          }))
+                        }
+                        className="rounded-xl border border-slate-700 bg-slate-950/85 px-3 py-2 text-xs font-bold text-white outline-none"
+                      >
+                        <option value="male">Sexo: Masculino</option>
+                        <option value="female">Sexo: Feminino</option>
+                      </select>
+
+                      <div className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950/85 px-3 py-1.5">
+                        <span className="text-xs text-slate-400">Idade:</span>
+                        <input
+                          type="number"
+                          min="15"
+                          max="90"
+                          value={state.profile.age}
+                          onChange={(e) =>
+                            setState((prev) => ({
+                              ...prev,
+                              profile: { ...prev.profile, age: Number(e.target.value) || 30 }
+                            }))
+                          }
+                          className="w-12 bg-transparent text-right text-xs font-bold text-[#00e5ff] outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                  <div className="space-y-3 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl lg:col-span-4">
+                    <h3 className="text-sm font-bold text-white">
+                      1. Espessura das Pregas Cutâneas (mm)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Clique em qualquer dobra para iluminar o ponto anatômico exato no mapa ao lado.
+                    </p>
+
+                    <div className="space-y-2.5 pt-1">
+                      {activeProtocolObj.sites.map((siteKey) => {
+                        const site = SKINFOLD_SITES[siteKey];
+                        const isSelected = state.skinfold.selectedSiteId === siteKey;
+                        return (
+                          <div
+                            key={siteKey}
+                            onClick={() =>
+                              setState((prev) => ({
+                                ...prev,
+                                skinfold: { ...prev.skinfold, selectedSiteId: siteKey }
+                              }))
+                            }
+                            className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition ${
+                              isSelected
+                                ? 'border-[#00e5ff] bg-cyan-500/15'
+                                : 'border-slate-800 bg-slate-950/65 hover:border-slate-700'
+                            }`}
+                          >
+                            <div>
+                              <span className="block text-xs font-bold text-white">{site.name}</span>
+                              <span className="text-[10px] text-[#00e5ff]">
+                                {site.direction.split(' ')[0]} • Vista {site.view === 'front' ? 'Frontal' : 'Dorsal'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="80"
+                                value={state.skinfold.folds[siteKey] ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? '' : Number(e.target.value);
+                                  setState((prev) => ({
+                                    ...prev,
+                                    skinfold: {
+                                      ...prev.skinfold,
+                                      selectedSiteId: siteKey,
+                                      folds: { ...prev.skinfold.folds, [siteKey]: val }
+                                    }
+                                  }));
+                                }}
+                                className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-right text-sm font-extrabold text-[#00e5ff] outline-none focus:border-[#00e5ff]"
+                              />
+                              <span className="text-xs text-slate-400">mm</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 space-y-2.5 rounded-2xl border border-teal-400/30 bg-teal-500/10 p-4">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-300">Somatório das Dobras (Σ):</span>
+                        <strong className="text-white">{skinfoldResults.sum} mm</strong>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-300">Densidade Corporal (Dc):</span>
+                        <strong className="text-cyan-200">
+                          {skinfoldResults.density ? `${skinfoldResults.density} g/cm³` : '—'}
+                        </strong>
+                      </div>
+                      <div className="flex items-baseline justify-between border-t border-teal-400/20 pt-2">
+                        <span className="text-xs font-bold text-teal-200">% Gordura (Siri):</span>
+                        <span className="text-2xl font-extrabold text-teal-300">
+                          {skinfoldResults.bodyFatPct !== null ? `${skinfoldResults.bodyFatPct}%` : '—'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                        <div className="rounded-lg bg-slate-950/70 p-2 text-center">
+                          <span className="block text-[10px] text-slate-400">Massa Magra</span>
+                          <strong className="text-[#00e5ff]">
+                            {skinfoldResults.leanMassKg !== null ? `${skinfoldResults.leanMassKg} kg` : '—'}
+                          </strong>
+                        </div>
+                        <div className="rounded-lg bg-slate-950/70 p-2 text-center">
+                          <span className="block text-[10px] text-slate-400">Massa Gorda</span>
+                          <strong className="text-amber-300">
+                            {skinfoldResults.fatMassKg !== null ? `${skinfoldResults.fatMassKg} kg` : '—'}
+                          </strong>
+                        </div>
+                      </div>
+                      <div className="text-center text-[11px] font-semibold text-cyan-200">
+                        Classificação: {skinfoldResults.classification}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveSkinfoldToHistory}
+                        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:opacity-95"
+                        style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }}
+                      >
+                        <BookmarkCheck className="h-4 w-4" />
+                        Salvar no Histórico Integrado
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-between rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl lg:col-span-4">
+                    <div className="w-full text-center">
+                      <h3 className="text-sm font-bold text-white">
+                        2. Mapa Anatômico de Pontos Exatos
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        Clique nos marcadores anatômicos para inspecionar a técnica de pinçamento.
+                      </p>
+                    </div>
+
+                    <div className="my-2 w-full">
+                      <AnatomicalSkinfoldMapSVG
+                        activeSites={activeProtocolObj.sites}
+                        selectedSiteId={selectedSiteObj.id}
+                        onSelectSite={(siteId) =>
+                          setState((prev) => ({
+                            ...prev,
+                            skinfold: { ...prev.skinfold, selectedSiteId: siteId }
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="w-full rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center text-[11px] text-slate-300">
+                      Hemicorpo padrão ISAK/ACSM: <strong>Lado Direito</strong> do avaliado.
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl lg:col-span-4">
+                    <div className="border-b border-slate-800 pb-3">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#00e5ff]">
+                        3. Guia Técnico de Coleta (ISAK / Pollock)
+                      </span>
+                      <h3 className="mt-0.5 text-lg font-extrabold text-white">
+                        Prega {selectedSiteObj.name}
+                      </h3>
+                    </div>
+
+                    <div className="space-y-3 text-xs leading-relaxed">
+                      <div className="rounded-xl border border-[#00e5ff]/25 bg-cyan-500/10 p-3.5">
+                        <span className="mb-1 block font-bold text-cyan-200">
+                          Localização Anatômica Exata
+                        </span>
+                        <p className="text-slate-200">{selectedSiteObj.location}</p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-950/75 p-3.5">
+                        <span className="mb-1 block font-bold text-teal-300">
+                          Direção & Eixo da Prega
+                        </span>
+                        <p className="text-slate-300">{selectedSiteObj.direction}</p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-950/75 p-3.5">
+                        <span className="mb-1 block font-bold text-white">
+                          Técnica de Pinçamento com Adipômetro
+                        </span>
+                        <p className="text-slate-300">{selectedSiteObj.technique}</p>
+                      </div>
+
+                      <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3.5">
+                        <span className="mb-1 block font-bold text-amber-200">
+                          Erros Comuns a Evitar
+                        </span>
+                        <p className="text-amber-100/90">{selectedSiteObj.commonErrors}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ================================================================= */}
+        {/* MÓDULO 4: CLÍNICA & FÁRMACOS                                      */}
+        {/* ================================================================= */}
+        {activeModule === 'clinical' && (
+          <div className="space-y-6">
+            <div className="flex items-start gap-3.5 rounded-2xl border border-[#00e5ff]/35 bg-cyan-500/10 p-4 backdrop-blur-xl">
+              <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#00e5ff]" />
+              <div className="text-xs leading-relaxed text-cyan-100">
+                <strong className="block text-sm font-bold text-white">
+                  Base Clínica & Simulador Educacional — 14 Agentes Regulamentados (ANVISA / FDA)
+                </strong>
+                Conteúdo fundamentado em bulas oficiais e ensaios clínicos (STEP, SURMOUNT, SCALE,
+                REWIND, UKPDS, EMPA-REG, JUPITER, XENDOS). Destinado exclusivamente a estudo
+                acadêmico e apoio à decisão clínica profissional.
+              </div>
+            </div>
+
+            {activeSubTab === 'simulator' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-base font-bold text-white">
+                        Simulador Farmacocinético Multi-Agente ({state.clinicalStudy.agents.length}/3 Ativos)
+                      </h2>
+                      <p className="text-xs text-slate-400">
+                        Combine fármacos regulamentados, ajuste dose, frequência e semana de início para observar o steady-state.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-1.5">
+                        <Clock className="h-3.5 w-3.5 text-[#00e5ff]" />
+                        <span className="text-xs text-slate-400">Horizonte:</span>
+                        <select
+                          value={state.clinicalStudy.horizonWeeks}
+                          onChange={(e) =>
+                            setState((prev) => ({
+                              ...prev,
+                              clinicalStudy: {
+                                ...prev.clinicalStudy,
+                                horizonWeeks: Number(e.target.value)
+                              }
+                            }))
+                          }
+                          className="bg-transparent text-xs font-bold text-cyan-200 outline-none"
+                        >
+                          <option value={8} className="bg-[#08132b]">8 semanas</option>
+                          <option value={12} className="bg-[#08132b]">12 semanas</option>
+                          <option value={16} className="bg-[#08132b]">16 semanas</option>
+                          <option value={24} className="bg-[#08132b]">24 semanas</option>
+                        </select>
+                      </div>
+
+                      {state.clinicalStudy.agents.length < 3 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddDrugToSimulator(REGULATED_DRUGS[0])}
+                          className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-950"
+                          style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Adicionar Fármaco
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    {state.clinicalStudy.agents.map((ag, index) => {
+                      const drug = REGULATED_DRUGS.find((d) => d.id === ag.drugId) || REGULATED_DRUGS[0];
+                      return (
+                        <div
+                          key={ag.id}
+                          className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4"
+                          style={{ borderTop: `3px solid ${drug.color}` }}
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <span
+                              className="rounded-md px-2 py-0.5 text-[11px] font-bold text-slate-950"
+                              style={{ backgroundColor: drug.color }}
+                            >
+                              Agente #{index + 1} • {drug.route}
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setState((prev) => ({
+                                    ...prev,
+                                    clinicalStudy: {
+                                      ...prev.clinicalStudy,
+                                      selectedEncyclopediaDrugId: drug.id
+                                    }
+                                  }));
+                                  setActiveSubTab('encyclopedia');
+                                }}
+                                className="rounded px-2 py-0.5 text-[11px] font-semibold text-[#00e5ff] hover:bg-cyan-500/15"
+                              >
+                                Ver Bula/Estudos
+                              </button>
+
+                              {state.clinicalStudy.agents.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setState((prev) => ({
+                                      ...prev,
+                                      clinicalStudy: {
+                                        ...prev.clinicalStudy,
+                                        agents: prev.clinicalStudy.agents.filter((a) => a.id !== ag.id)
+                                      }
+                                    }))
+                                  }
+                                  className="rounded p-1 text-rose-300 hover:bg-rose-500/15"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <label className="mb-1 block text-[11px] text-slate-400">
+                                Fármaco Regulamentado
+                              </label>
+                              <select
+                                value={ag.drugId}
+                                onChange={(e) => {
+                                  const selected =
+                                    REGULATED_DRUGS.find((d) => d.id === e.target.value) || REGULATED_DRUGS[0];
+                                  setState((prev) => ({
+                                    ...prev,
+                                    clinicalStudy: {
+                                      ...prev.clinicalStudy,
+                                      agents: prev.clinicalStudy.agents.map((item) =>
+                                        item.id === ag.id
+                                          ? {
+                                              ...item,
+                                              drugId: selected.id,
+                                              dose: selected.defaultDose,
+                                              freqDays: selected.defaultFreqDays
+                                            }
+                                          : item
+                                      )
+                                    }
+                                  }));
+                                }}
+                                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs font-bold text-white outline-none focus:border-[#00e5ff]"
+                              >
+                                {DRUG_CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
+                                  <optgroup key={cat.id} label={cat.label}>
+                                    {REGULATED_DRUGS.filter((d) => d.category === cat.id).map((d) => (
+                                      <option key={d.id} value={d.id}>
+                                        {d.name} ({d.brandNames})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="mb-1 block text-[11px] text-slate-400">
+                                  Dose ({drug.unit})
+                                </label>
+                                <select
+                                  value={ag.dose}
+                                  onChange={(e) =>
+                                    setState((prev) => ({
+                                      ...prev,
+                                      clinicalStudy: {
+                                        ...prev.clinicalStudy,
+                                        agents: prev.clinicalStudy.agents.map((item) =>
+                                          item.id === ag.id
+                                            ? { ...item, dose: Number(e.target.value) }
+                                            : item
+                                        )
+                                      }
+                                    }))
+                                  }
+                                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-cyan-200 outline-none"
+                                >
+                                  {drug.standardDoses.map((dVal) => (
+                                    <option key={dVal} value={dVal}>
+                                      {dVal} {drug.unit}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-[11px] text-slate-400">Intervalo</label>
+                                <select
+                                  value={ag.freqDays}
+                                  onChange={(e) =>
+                                    setState((prev) => ({
+                                      ...prev,
+                                      clinicalStudy: {
+                                        ...prev.clinicalStudy,
+                                        agents: prev.clinicalStudy.agents.map((item) =>
+                                          item.id === ag.id
+                                            ? { ...item, freqDays: Number(e.target.value) }
+                                            : item
+                                        )
+                                      }
+                                    }))
+                                  }
+                                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none"
+                                >
+                                  <option value={0.33}>8h (3x/dia)</option>
+                                  <option value={1}>Diária (24h)</option>
+                                  <option value={3.5}>3.5 dias</option>
+                                  <option value={7}>Semanal (7d)</option>
+                                  <option value={14}>Quinzenal (14d)</option>
+                                  <option value={21}>Cada 21 dias</option>
+                                  <option value={70}>Cada 10 sem.</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-[11px] text-slate-400">Início (Sem.)</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={state.clinicalStudy.horizonWeeks}
+                                  value={ag.startWeek}
+                                  onChange={(e) =>
+                                    setState((prev) => ({
+                                      ...prev,
+                                      clinicalStudy: {
+                                        ...prev.clinicalStudy,
+                                        agents: prev.clinicalStudy.agents.map((item) =>
+                                          item.id === ag.id
+                                            ? { ...item, startWeek: Math.max(1, Number(e.target.value) || 1) }
+                                            : item
+                                        )
+                                      }
+                                    }))
+                                  }
+                                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-center text-xs font-bold text-white outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-base font-bold text-white">
+                        Curva Farmacocinética de Acúmulo & Steady-State (%)
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Modelo Bateman + somatório real dos 4 ésteres quando o "Durateston" está selecionado.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      {clinicalSim.series.map((s) => (
+                        <span key={s.agentId} className="flex items-center gap-1.5 font-semibold text-slate-200">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.drug.color }} />
+                          {s.drug.name} ({s.dose}
+                          {s.drug.unit})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <MultiAgentPKChartSVG simData={clinicalSim} />
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <div className="space-y-3 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-[#00e5ff]" />
+                      <h3 className="text-base font-bold text-white">Interações & Sobreposição</h3>
+                    </div>
+
+                    {clinicalSim.alerts.length === 0 ? (
+                      <div className="rounded-xl border border-teal-400/25 bg-teal-500/10 p-3.5 text-xs text-teal-100">
+                        Nenhuma duplicidade de classe ou interação crítica detectada neste cenário.
+                      </div>
+                    ) : (
+                      clinicalSim.alerts.map((al, i) => (
+                        <div
+                          key={i}
+                          className={`rounded-xl border p-3.5 text-xs leading-relaxed ${
+                            al.level === 'high'
+                              ? 'border-rose-400/40 bg-rose-500/10 text-rose-100'
+                              : al.level === 'medium'
+                              ? 'border-amber-400/40 bg-amber-500/10 text-amber-100'
+                              : 'border-[#00e5ff]/30 bg-cyan-500/10 text-cyan-100'
+                          }`}
+                        >
+                          <div className="mb-1 flex items-center gap-1.5 font-bold">
+                            {al.level === 'info' ? (
+                              <Info className="h-4 w-4 shrink-0" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 shrink-0" />
+                            )}
+                            <span>{al.title}</span>
+                          </div>
+                          <p>{al.text}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="space-y-4 lg:col-span-2">
+                    {clinicalSim.series.map((s) => (
+                      <div
+                        key={s.agentId}
+                        className="rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-5 backdrop-blur-xl"
+                      >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                          <div>
+                            <h4 className="text-sm font-extrabold text-white">
+                              Evolução Temporal Esperada: {s.drug.name}{' '}
+                              <span className="text-[#00e5ff]">{s.drug.brandNames}</span>
+                            </h4>
+                            <span className="text-[11px] text-slate-400">
+                              Steady-state estimado em ~{s.steadyStateDays} dias ({s.steadyStateWeek} semanas)
+                            </span>
+                          </div>
+                          <span
+                            className="rounded-lg px-2.5 py-1 text-xs font-bold text-slate-950"
+                            style={{ backgroundColor: s.drug.color }}
+                          >
+                            {s.dose} {s.drug.unit}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2.5 text-xs sm:grid-cols-3">
+                          <div className="rounded-xl bg-slate-950/70 p-3">
+                            <span className="block font-bold text-[#00e5ff]">Semanas 1 a 2</span>
+                            <p className="mt-1 leading-relaxed text-slate-300">
+                              {s.drug.timelineEffects.w1_2}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-slate-950/70 p-3">
+                            <span className="block font-bold text-teal-300">Semanas 4 a 8</span>
+                            <p className="mt-1 leading-relaxed text-slate-300">
+                              {s.drug.timelineEffects.w4_8}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-slate-950/70 p-3">
+                            <span className="block font-bold text-sky-300">Semana 12+</span>
+                            <p className="mt-1 leading-relaxed text-slate-300">
+                              {s.drug.timelineEffects.w12_plus}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSubTab === 'encyclopedia' && (
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                <div className="space-y-3 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-4 backdrop-blur-xl lg:col-span-4">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#00e5ff]" />
+                    <input
+                      type="text"
+                      placeholder='Buscar "Mounjaro", "Durateston", "Ozempic"...'
+                      value={state.clinicalStudy.searchQuery || ''}
+                      onChange={(e) =>
+                        setState((prev) => ({
+                          ...prev,
+                          clinicalStudy: { ...prev.clinicalStudy, searchQuery: e.target.value }
+                        }))
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/90 py-2 pl-9 pr-3 text-xs text-white placeholder-slate-400 outline-none focus:border-[#00e5ff]"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {DRUG_CATEGORIES.map((cat) => {
+                      const active = (state.clinicalStudy.selectedCategory || 'all') === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() =>
+                            setState((prev) => ({
+                              ...prev,
+                              clinicalStudy: { ...prev.clinicalStudy, selectedCategory: cat.id }
+                            }))
+                          }
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                            active
+                              ? 'bg-[#00e5ff] text-slate-950'
+                              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="max-h-[620px] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                    {filteredEncyclopediaDrugs.map((drug) => {
+                      const isSelected = selectedEncyclopediaDrug?.id === drug.id;
+                      return (
+                        <button
+                          key={drug.id}
+                          type="button"
+                          onClick={() =>
+                            setState((prev) => ({
+                              ...prev,
+                              clinicalStudy: {
+                                ...prev.clinicalStudy,
+                                selectedEncyclopediaDrugId: drug.id
+                              }
+                            }))
+                          }
+                          className={`w-full rounded-xl border p-3 text-left transition ${
+                            isSelected
+                              ? 'border-[#00e5ff] bg-cyan-500/15 shadow-md'
+                              : 'border-slate-800 bg-slate-950/65 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              {drug.categoryLabel.split('&')[0]}
+                            </span>
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: drug.color }}
+                            />
+                          </div>
+                          <div className="mt-0.5 text-xs font-extrabold text-white">{drug.name}</div>
+                          <div className="text-[11px] font-bold text-[#00e5ff]">{drug.brandNames}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {selectedEncyclopediaDrug && (
+                  <div className="space-y-4 rounded-2xl border border-[#00e5ff]/20 bg-[#08132b]/85 p-6 backdrop-blur-xl lg:col-span-8">
+                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
+                      <div>
+                        <span
+                          className="text-xs font-extrabold uppercase tracking-wider"
+                          style={{ color: selectedEncyclopediaDrug.color }}
+                        >
+                          {selectedEncyclopediaDrug.drugClass}
+                        </span>
+                        <h2 className="mt-1 text-xl font-extrabold text-white">
+                          {selectedEncyclopediaDrug.name}{' '}
+                          <span className="text-[#00e5ff]">{selectedEncyclopediaDrug.brandNames}</span>
+                        </h2>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Via: <strong className="text-slate-200">{selectedEncyclopediaDrug.route}</strong> •
+                          Doses de referência:{' '}
+                          <strong className="text-slate-200">
+                            {selectedEncyclopediaDrug.standardDoses.join(' / ')} {selectedEncyclopediaDrug.unit}
+                          </strong>
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAddDrugToSimulator(selectedEncyclopediaDrug)}
+                        className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:opacity-95"
+                        style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #14b8a6 100%)' }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Enviar ao Simulador
+                      </button>
+                    </div>
+
+                    <div className="rounded-xl border border-[#00e5ff]/25 bg-cyan-500/10 p-4 text-xs leading-relaxed">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-white">
+                        <Target className="h-4 w-4 text-[#00e5ff]" />
+                        1. Para que serve (Indicações Clínicas Aprovadas em Bula)
+                      </span>
+                      <p className="text-cyan-50">{selectedEncyclopediaDrug.indications}</p>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-950/75 p-4 text-xs leading-relaxed">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-teal-300">
+                        <FlaskConical className="h-4 w-4" />
+                        2. Como age no organismo (Mecanismo Farmacodinâmico Detalhado)
+                      </span>
+                      <p className="text-slate-200">{selectedEncyclopediaDrug.mechanism}</p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/65 p-4 text-xs">
+                      <span className="mb-2.5 block text-sm font-bold text-white">
+                        3. Perfil Farmacocinético (ADME)
+                      </span>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg bg-slate-900/90 p-2.5">
+                          <span className="block text-[10px] uppercase text-slate-400">
+                            Meia-Vida de Eliminação (t½)
+                          </span>
+                          <strong className="text-[#00e5ff]">
+                            {selectedEncyclopediaDrug.halfLifeHours} horas (~
+                            {selectedEncyclopediaDrug.halfLifeDays} dias)
+                          </strong>
+                        </div>
+                        <div className="rounded-lg bg-slate-900/90 p-2.5">
+                          <span className="block text-[10px] uppercase text-slate-400">
+                            Tempo até Pico Plasmático (Tmáx)
+                          </span>
+                          <strong className="text-teal-300">{selectedEncyclopediaDrug.tmaxText}</strong>
+                        </div>
+                        <div className="rounded-lg bg-slate-900/90 p-2.5">
+                          <span className="block text-[10px] uppercase text-slate-400">
+                            Biodisponibilidade
+                          </span>
+                          <strong className="text-slate-200">
+                            {selectedEncyclopediaDrug.bioavailability}
+                          </strong>
+                        </div>
+                        <div className="rounded-lg bg-slate-900/90 p-2.5">
+                          <span className="block text-[10px] uppercase text-slate-400">
+                            Tempo até Estado Estacionário
+                          </span>
+                          <strong className="text-cyan-200">
+                            ~{(selectedEncyclopediaDrug.halfLifeDays * 4.5).toFixed(1)} dias
+                          </strong>
+                        </div>
+                      </div>
+                      <p className="mt-2.5 text-[11px] text-slate-400">
+                        <strong className="text-slate-300">Metabolismo & Excreção:</strong>{' '}
+                        {selectedEncyclopediaDrug.metabolismExcretion}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-teal-400/25 bg-teal-500/10 p-4 text-xs leading-relaxed">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-teal-200">
+                        <FileText className="h-4 w-4" />
+                        4. Evidências de Ensaios Clínicos & Desfechos Reais
+                      </span>
+                      <pre className="whitespace-pre-wrap font-sans text-slate-100">
+                        {selectedEncyclopediaDrug.clinicalStudies}
+                      </pre>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
+                      <div className="rounded-xl bg-slate-950/75 p-3.5">
+                        <span className="mb-1 block font-bold text-amber-300">
+                          Reações Adversas de Bula
+                        </span>
+                        <p className="leading-relaxed text-slate-300">
+                          {selectedEncyclopediaDrug.sideEffects}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-950/75 p-3.5">
+                        <span className="mb-1 block font-bold text-rose-300">
+                          Contraindicações
+                        </span>
+                        <p className="leading-relaxed text-slate-300">
+                          {selectedEncyclopediaDrug.contraindications}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-950/75 p-3.5">
+                        <span className="mb-1 block font-bold text-[#00e5ff]">
+                          Monitoramento Laboratorial
+                        </span>
+                        <p className="leading-relaxed text-slate-300">
+                          {selectedEncyclopediaDrug.labMonitoring}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
