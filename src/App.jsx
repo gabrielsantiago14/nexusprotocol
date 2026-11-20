@@ -2126,16 +2126,79 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="relative mx-auto max-w-[270px] rounded-2xl border border-slate-800 bg-[#040C1B] p-3">
-                <svg viewBox="0 0 100 100" className="w-full h-72">
-                  <circle cx="50" cy="14" r="7" fill="#0f294a" stroke="#22d3ee" strokeWidth="1.2" />
-                  <path
-                    d="M32 25 Q50 21 68 25 L72 52 L60 54 L58 92 L46 92 L45 58 L39 92 L27 92 L29 52 Z"
-                    fill="#0b1e38"
-                    stroke="#38bdf8"
-                    strokeOpacity="0.45"
-                    strokeWidth="1.2"
+                            <div className="relative mx-auto max-w-[260px] rounded-2xl border border-cyan-500/20 bg-[#040C1B] p-3">
+                <svg viewBox="0 0 100 100" className="w-full h-72 select-none">
+                  {/* Cabeça */}
+                  <circle
+                    cx="50"
+                    cy="15"
+                    r="8"
+                    fill="#0f294a"
+                    stroke="#22d3ee"
+                    strokeWidth="1.4"
                   />
+
+                  {/* Tronco */}
+                  <rect
+                    x="36"
+                    y="25"
+                    width="28"
+                    height="34"
+                    rx="6"
+                    fill="#0f294a"
+                    stroke="#22d3ee"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Braço esquerdo */}
+                  <rect
+                    x="24"
+                    y="26"
+                    width="9"
+                    height="28"
+                    rx="4.5"
+                    fill="#0f294a"
+                    stroke="#22d3ee"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Braço direito */}
+                  <rect
+                    x="67"
+                    y="26"
+                    width="9"
+                    height="28"
+                    rx="4.5"
+                    fill="#0f294a"
+                    stroke="#22d3ee"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Perna esquerda */}
+                  <rect
+                    x="38"
+                    y="61"
+                    width="10"
+                    height="33"
+                    rx="5"
+                    fill="#0f294a"
+                    stroke="#22d3ee"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Perna direita */}
+                  <rect
+                    x="52"
+                    y="61"
+                    width="10"
+                    height="33"
+                    rx="5"
+                    fill="#0f294a"
+                    stroke="#22d3ee"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Pontos anatômicos */}
                   {visibleSites.map((site) => {
                     const isSelected = selectedSite.id === site.id;
                     return (
@@ -2147,7 +2210,7 @@ export default function App() {
                         <circle
                           cx={site.x}
                           cy={site.y}
-                          r={isSelected ? 4.8 : 3.5}
+                          r={isSelected ? 4.4 : 3.2}
                           fill={isSelected ? "#22d3ee" : "#0284c7"}
                           stroke="#ffffff"
                           strokeWidth="1"
