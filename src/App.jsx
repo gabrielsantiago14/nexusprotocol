@@ -25,28 +25,45 @@ import {
   ShieldAlert,
   FileText,
   ArrowUpRight,
+  Clock,
+  Edit3,
+  Check,
+  X,
+  Database,
+  Flame,
+  HeartPulse,
 } from "lucide-react";
 
-const STORAGE_KEY = "nexusprotocol_v1_state";
+const STORAGE_KEY = "nexusprotocol_full_v1_state";
+
+const WEEK_DAYS = [
+  { index: 0, short: "Dom", full: "Domingo" },
+  { index: 1, short: "Seg", full: "Segunda-feira" },
+  { index: 2, short: "Ter", full: "Terça-feira" },
+  { index: 3, short: "Qua", full: "Quarta-feira" },
+  { index: 4, short: "Qui", full: "Quinta-feira" },
+  { index: 5, short: "Sex", full: "Sexta-feira" },
+  { index: 6, short: "Sáb", full: "Sábado" },
+];
 
 const DEFAULT_FOODS = [
-  { id: "f1", name: "Peito de frango grelhado (100g)", kcal: 165, p: 31, c: 0, g: 3.6, group: "Proteína" },
-  { id: "f2", name: "Ovo inteiro cozido (1 un. ~50g)", kcal: 72, p: 6.3, c: 0.4, g: 4.8, group: "Proteína" },
-  { id: "f3", name: "Clara de ovo (100g)", kcal: 52, p: 10.9, c: 0.7, g: 0.2, group: "Proteína" },
-  { id: "f4", name: "Patinho bovino grelhado (100g)", kcal: 219, p: 35.9, c: 0, g: 7.3, group: "Proteína" },
-  { id: "f5", name: "Tilápia grelhada (100g)", kcal: 128, p: 26.2, c: 0, g: 2.7, group: "Proteína" },
-  { id: "f6", name: "Whey protein concentrado (30g)", kcal: 120, p: 24, c: 2.5, g: 1.5, group: "Proteína" },
-  { id: "f7", name: "Iogurte natural desnatado (170g)", kcal: 74, p: 7.2, c: 9.5, g: 0.4, group: "Laticínio" },
+  { id: "f1", name: "Peito de frango grelhado (100g)", kcal: 165, p: 31.0, c: 0.0, g: 3.6, group: "Proteína" },
+  { id: "f2", name: "Ovo inteiro cozido (100g ~ 2 un.)", kcal: 144, p: 12.6, c: 0.8, g: 9.6, group: "Proteína" },
+  { id: "f3", name: "Clara de ovo cozida (100g)", kcal: 52, p: 10.9, c: 0.7, g: 0.2, group: "Proteína" },
+  { id: "f4", name: "Patinho bovino grelhado (100g)", kcal: 219, p: 35.9, c: 0.0, g: 7.3, group: "Proteína" },
+  { id: "f5", name: "Tilápia grelhada (100g)", kcal: 128, p: 26.2, c: 0.0, g: 2.7, group: "Proteína" },
+  { id: "f6", name: "Whey protein concentrado (100g)", kcal: 400, p: 80.0, c: 8.3, g: 5.0, group: "Proteína" },
+  { id: "f7", name: "Iogurte natural desnatado (100g)", kcal: 44, p: 4.2, c: 5.6, g: 0.2, group: "Laticínio" },
   { id: "f8", name: "Queijo minas frescal (100g)", kcal: 264, p: 17.4, c: 3.2, g: 20.2, group: "Laticínio" },
-  { id: "f9", name: "Queijo muçarela light (30g)", kcal: 78, p: 7.5, c: 1.0, g: 4.8, group: "Laticínio" },
+  { id: "f9", name: "Queijo muçarela light (100g)", kcal: 260, p: 25.0, c: 3.3, g: 16.0, group: "Laticínio" },
   { id: "f10", name: "Batata inglesa cozida (100g)", kcal: 86, p: 1.7, c: 20.1, g: 0.1, group: "Carboidrato" },
   { id: "f11", name: "Arroz branco cozido (100g)", kcal: 130, p: 2.7, c: 28.2, g: 0.3, group: "Carboidrato" },
-  { id: "f12", name: "Aveia em flocos (40g)", kcal: 152, p: 5.5, c: 26.5, g: 2.8, group: "Carboidrato" },
-  { id: "f13", name: "Torrada integral / Levtoast (2 un.)", kcal: 76, p: 2.6, c: 14.2, g: 0.9, group: "Carboidrato" },
-  { id: "f14", name: "Banana prata média (80g)", kcal: 78, p: 1.0, c: 20.1, g: 0.2, group: "Carboidrato" },
-  { id: "f15", name: "Doce de leite pastoso (20g)", kcal: 62, p: 1.4, c: 11.2, g: 1.3, group: "Carboidrato" },
-  { id: "f16", name: "Amendoim torrado sem sal (30g)", kcal: 176, p: 7.8, c: 4.8, g: 14.8, group: "Gordura" },
-  { id: "f17", name: "Azeite de oliva extravirgem (10ml)", kcal: 88, p: 0, c: 0, g: 10.0, group: "Gordura" },
+  { id: "f12", name: "Aveia em flocos (100g)", kcal: 380, p: 13.8, c: 66.3, g: 7.0, group: "Carboidrato" },
+  { id: "f13", name: "Torrada integral / Levtoast (100g)", kcal: 380, p: 13.0, c: 71.0, g: 4.5, group: "Carboidrato" },
+  { id: "f14", name: "Banana prata (100g)", kcal: 98, p: 1.3, c: 25.1, g: 0.2, group: "Carboidrato" },
+  { id: "f15", name: "Doce de leite pastoso (100g)", kcal: 310, p: 7.0, c: 56.0, g: 6.5, group: "Carboidrato" },
+  { id: "f16", name: "Amendoim torrado sem sal (100g)", kcal: 587, p: 26.0, c: 16.0, g: 49.3, group: "Gordura" },
+  { id: "f17", name: "Azeite de oliva extravirgem (100ml)", kcal: 884, p: 0.0, c: 0.0, g: 100.0, group: "Gordura" },
   { id: "f18", name: "Abacate / Avocado (100g)", kcal: 160, p: 2.0, c: 8.5, g: 14.7, group: "Gordura" },
 ];
 
@@ -64,6 +81,7 @@ const DRUG_CATALOG = [
     peakDays: 2,
     steadyStateWeeks: 4,
     potencyFactor: 1.0,
+    color: "#22d3ee",
     summary:
       "Análogo do peptídeo semelhante ao glucagon-1 (GLP-1) com resistência à degradação pela DPP-4, promovendo secreção de insulina glicose-dependente, supressão do glucagon e retardo do esvaziamento gástrico.",
     mechanism:
@@ -99,6 +117,7 @@ const DRUG_CATALOG = [
     peakDays: 1.5,
     steadyStateWeeks: 4,
     potencyFactor: 1.15,
+    color: "#38bdf8",
     summary:
       "Agonista duplo dos receptores de GIP (polipeptídeo insulinotrópico dependente de glicose) e GLP-1, desenhado para ação metabólica e incretínica combinada.",
     mechanism:
@@ -134,6 +153,7 @@ const DRUG_CATALOG = [
     peakDays: 0.5,
     steadyStateWeeks: 1,
     potencyFactor: 0.85,
+    color: "#34d399",
     summary:
       "Agonista de receptor de GLP-1 de administração diária e meia-vida mais curta (~13 horas), permitindo ajustes diários de tolerabilidade.",
     mechanism:
@@ -168,6 +188,7 @@ const DRUG_CATALOG = [
     peakDays: 2,
     steadyStateWeeks: 3,
     potencyFactor: 0.82,
+    color: "#a78bfa",
     summary:
       "Agonista de receptor de GLP-1 conjugado a fragmento Fc de IgG4 humana, de aplicação semanal.",
     mechanism:
@@ -203,6 +224,7 @@ const DRUG_CATALOG = [
     steadyStateWeeks: 5,
     potencyFactor: 1.0,
     isMultiEster: true,
+    color: "#f59e0b",
     summary:
       "Blend de quatro ésteres de testosterona (propionato 30 mg, fempropionato 60 mg, isocaproato 60 mg e decanoato 100 mg a cada 250 mg) com liberação escalonada.",
     mechanism:
@@ -238,6 +260,7 @@ const DRUG_CATALOG = [
     peakDays: 2,
     steadyStateWeeks: 4,
     potencyFactor: 0.96,
+    color: "#fb923c",
     summary:
       "Éster de testosterona de ação intermediária (~8 dias de meia-vida), amplamente utilizado em protocolos regulamentados de reposição hormonal masculina.",
     mechanism:
@@ -273,6 +296,7 @@ const DRUG_CATALOG = [
     peakDays: 7,
     steadyStateWeeks: 18,
     potencyFactor: 1.0,
+    color: "#f472b6",
     summary:
       "Éster de cadeia longa (~25 dias de meia-vida em formulação oleosa), projetado para intervalos espaçados (ex.: 10 a 12 semanas após dose de ataque).",
     mechanism:
@@ -308,6 +332,7 @@ const DRUG_CATALOG = [
     peakDays: 0.2,
     steadyStateWeeks: 1,
     potencyFactor: 0.75,
+    color: "#c084fc",
     summary:
       "Gel hidroalcoólico de aplicação tópica diária que forma reservatório no estrato córneo para absorção contínua ao longo de 24 horas.",
     mechanism:
@@ -342,6 +367,7 @@ const DRUG_CATALOG = [
     peakDays: 0.2,
     steadyStateWeeks: 6,
     potencyFactor: 0.9,
+    color: "#2dd4bf",
     summary:
       "Hormônio tireoidiano sintético (T4) que atua como pró-hormônio periférico, convertido em triiodotironina (T3) ativa por desiodases.",
     mechanism:
@@ -375,6 +401,7 @@ const DRUG_CATALOG = [
     peakDays: 0.15,
     steadyStateWeeks: 1,
     potencyFactor: 1.1,
+    color: "#f87171",
     summary:
       "Forma sintética do hormônio tireoidiano ativo T3, com início de ação mais rápido e meia-vida em torno de 24 horas.",
     mechanism:
@@ -408,6 +435,7 @@ const DRUG_CATALOG = [
     peakDays: 0.15,
     steadyStateWeeks: 1,
     potencyFactor: 0.72,
+    color: "#60a5fa",
     summary:
       "Biguanida de primeira linha no diabetes tipo 2 que reduz a produção hepática de glicose e melhora a sensibilidade periférica à insulina.",
     mechanism:
@@ -442,6 +470,7 @@ const DRUG_CATALOG = [
     peakDays: 0.1,
     steadyStateWeeks: 1,
     potencyFactor: 0.78,
+    color: "#4ade80",
     summary:
       "Inibidores do cotransportador sódio-glicose 2 (SGLT2) no túbulo proximal renal, promovendo glicosúria e proteção cardiorrenal.",
     mechanism:
@@ -476,6 +505,7 @@ const DRUG_CATALOG = [
     peakDays: 0.2,
     steadyStateWeeks: 1,
     potencyFactor: 0.75,
+    color: "#facc15",
     summary:
       "Inibidores da HMG-CoA redutase (estatinas) que reduzem a síntese hepática de colesterol e aumentam a captação de LDL-colesterol.",
     mechanism:
@@ -509,6 +539,7 @@ const DRUG_CATALOG = [
     peakDays: 0.1,
     steadyStateWeeks: 1,
     potencyFactor: 0.65,
+    color: "#e879f9",
     summary:
       "Inibidor seletivo e reversível das lipases gastrointestinais que reduz em cerca de ~30% a absorção da gordura dietética no trato digestivo.",
     mechanism:
@@ -531,7 +562,7 @@ const DRUG_CATALOG = [
   },
 ];
 
-const SKINFORLD_SITES = {
+const SKINFOLD_SITES = {
   peitoral: {
     id: "peitoral",
     label: "Peitoral / Peito",
@@ -633,9 +664,10 @@ const SKINFORLD_SITES = {
 };
 
 function calculateBodyFatFromFolds({ protocol, sex, age, folds }) {
-  const n = (k) => Math.max(0, Number(folds[k]) || 0);
+  const n = (k) => Math.max(0, Number(folds?.[k]) || 0);
   let sum = 0;
   let bodyDensity = 1.05;
+  const safeAge = Number(age) || 30;
 
   if (protocol === "jp3") {
     if (sex === "male") {
@@ -644,14 +676,14 @@ function calculateBodyFatFromFolds({ protocol, sex, age, folds }) {
         1.10938 -
         0.0008267 * sum +
         0.0000016 * sum * sum -
-        0.0002574 * (Number(age) || 30);
+        0.0002574 * safeAge;
     } else {
       sum = n("triceps") + n("suprailiaca") + n("coxa");
       bodyDensity =
         1.0994921 -
         0.0009929 * sum +
         0.0000023 * sum * sum -
-        0.0001392 * (Number(age) || 30);
+        0.0001392 * safeAge;
     }
   } else {
     sum =
@@ -662,7 +694,6 @@ function calculateBodyFatFromFolds({ protocol, sex, age, folds }) {
       n("abdomen") +
       n("suprailiaca") +
       n("coxa");
-    const safeAge = Number(age) || 30;
     if (sex === "male") {
       bodyDensity =
         1.112 -
@@ -748,9 +779,9 @@ const INITIAL_PROFILES = [
       lastSumMm: 38,
     },
     history: [
-      { id: "h1", date: "2026-10-20", weightKg: 84.2, bodyFatPct: 15.8, waistCm: 83.5, note: "Avaliação inicial" },
-      { id: "h2", date: "2026-11-03", weightKg: 83.3, bodyFatPct: 14.9, waistCm: 82.2, note: "Ajuste proteico e treino" },
-      { id: "h3", date: "2026-11-17", weightKg: 82.4, bodyFatPct: 14.2, waistCm: 81.0, note: "Leitura adipômetro sincronizada" },
+      { id: "h1", date: "2026-10-20", weightKg: 84.2, bodyFatPct: 15.8, leanKg: 70.9, waistCm: 83.5, note: "Avaliação inicial" },
+      { id: "h2", date: "2026-11-03", weightKg: 83.3, bodyFatPct: 14.9, leanKg: 70.9, waistCm: 82.2, note: "Ajuste proteico e treino" },
+      { id: "h3", date: "2026-11-17", weightKg: 82.4, bodyFatPct: 14.2, leanKg: 70.7, waistCm: 81.0, note: "Leitura adipômetro sincronizada" },
     ],
     mealPlan: [
       { id: "m1", title: "Café da Manhã", items: [{ foodId: "f2", grams: 150 }, { foodId: "f13", grams: 40 }, { foodId: "f7", grams: 170 }] },
@@ -796,19 +827,42 @@ export default function App() {
     clinical: "encyclopedia",
   });
 
+  // Adipômetro & Mapa Anatômico
   const [selectedSiteId, setSelectedSiteId] = useState("peitoral");
   const [anatomyView, setAnatomyView] = useState("frontal");
   const [caliperNote, setCaliperNote] = useState("");
   const [toastMsg, setToastMsg] = useState("");
 
+  // Enciclopédia & Simulador PK/PD
   const [drugSearch, setDrugSearch] = useState("");
   const [drugCategoryFilter, setDrugCategoryFilter] = useState("Todos");
   const [selectedDrugId, setSelectedDrugId] = useState("semaglutida");
+  const [drugDetailTab, setDrugDetailTab] = useState("overview");
   const [simHorizonDays, setSimHorizonDays] = useState(56);
+  const [showIndividualCurves, setShowIndividualCurves] = useState(true);
 
+  // Nutrição: Cardápio, Novo Alimento & Equivalência
+  const [newMealTitle, setNewMealTitle] = useState("");
+  const [mealAddFoodId, setMealAddFoodId] = useState({});
+  const [mealAddGrams, setMealAddGrams] = useState({});
+  const [customFood, setCustomFood] = useState({
+    name: "",
+    group: "Proteína",
+    kcal: "",
+    p: "",
+    c: "",
+    g: "",
+  });
   const [equivSourceId, setEquivSourceId] = useState("f11");
   const [equivTargetId, setEquivTargetId] = useState("f10");
   const [equivSourceGrams, setEquivSourceGrams] = useState(150);
+
+  // Perfis: criar / editar
+  const [newProfileName, setNewProfileName] = useState("");
+  const [newProfileSex, setNewProfileSex] = useState("male");
+  const [newProfileAge, setNewProfileAge] = useState(30);
+  const [newProfileWeight, setNewProfileWeight] = useState(80);
+  const [newProfileHeight, setNewProfileHeight] = useState(175);
 
   const activeProfile = useMemo(
     () => profiles.find((p) => p.id === activeProfileId) || profiles[0],
@@ -955,54 +1009,162 @@ export default function App() {
     return DRUG_CATALOG.find((d) => d.id === selectedDrugId) || DRUG_CATALOG[0];
   }, [selectedDrugId]);
 
-  const simulationSeries = useMemo(() => {
-    const days = Array.from({ length: simHorizonDays + 1 }, (_, i) => i);
-    const activeList = (activeProfile.activeDrugs || []).filter((item) => item.enabled);
+  const activeSimulatedEntries = useMemo(() => {
+    return (activeProfile.activeDrugs || [])
+      .filter((item) => item.enabled)
+      .map((entry) => {
+        const drug = DRUG_CATALOG.find((d) => d.id === entry.drugId);
+        if (!drug) return null;
+        return { entry, drug };
+      })
+      .filter(Boolean);
+  }, [activeProfile.activeDrugs]);
 
-    return days.map((day) => {
-      let combined = 0;
-      activeList.forEach((entry) => {
-        const catalogDrug = DRUG_CATALOG.find((d) => d.id === entry.drugId);
-        if (!catalogDrug) return;
-        const offset = Number(entry.startDayOffset) || 0;
+  const simulationData = useMemo(() => {
+    const days = Array.from({ length: simHorizonDays + 1 }, (_, i) => i);
+
+    const perDrugSeries = activeSimulatedEntries.map(({ entry, drug }) => {
+      const offset = Number(entry.startDayOffset) || 0;
+      const points = days.map((day) => {
         const effectiveDay = Math.max(0, day - offset);
-        const val = simulateConcentrationAtDay(
-          catalogDrug,
+        const rawLevel = simulateConcentrationAtDay(
+          drug,
           entry.doseMg,
-          entry.intervalDays || catalogDrug.intervalDays,
+          entry.intervalDays || drug.intervalDays,
           effectiveDay
         );
-        combined += val * (catalogDrug.potencyFactor || 1);
+        return {
+          day,
+          level: Math.min(100, Number((rawLevel * (drug.potencyFactor || 1)).toFixed(1))),
+        };
+      });
+      return {
+        uid: entry.uid,
+        name: drug.name,
+        color: drug.color || "#22d3ee",
+        points,
+      };
+    });
+
+    const combinedSeries = days.map((day) => {
+      let sum = 0;
+      perDrugSeries.forEach((s) => {
+        sum += s.points[day]?.level || 0;
       });
       return {
         day,
-        level: Math.min(100, Number(combined.toFixed(1))),
+        level: Math.min(100, Number(sum.toFixed(1))),
       };
     });
-  }, [simHorizonDays, activeProfile.activeDrugs]);
+
+    return { perDrugSeries, combinedSeries };
+  }, [simHorizonDays, activeSimulatedEntries]);
 
   const currentPkLevel = useMemo(() => {
-    const activeList = (activeProfile.activeDrugs || []).filter((item) => item.enabled);
-    if (!activeList.length) return 0;
+    if (!activeSimulatedEntries.length) return 0;
     let sum = 0;
-    activeList.forEach((entry) => {
-      const catalogDrug = DRUG_CATALOG.find((d) => d.id === entry.drugId);
-      if (!catalogDrug) return;
-      sum +=
-        simulateConcentrationAtDay(
-          catalogDrug,
-          entry.doseMg,
-          entry.intervalDays || catalogDrug.intervalDays,
-          14
-        ) * (catalogDrug.potencyFactor || 1);
+    activeSimulatedEntries.forEach(({ entry, drug }) => {
+      const val = simulateConcentrationAtDay(
+        drug,
+        entry.doseMg,
+        entry.intervalDays || drug.intervalDays,
+        14
+      );
+      sum += val * (drug.potencyFactor || 1);
     });
     return Math.min(100, Number(sum.toFixed(1)));
-  }, [activeProfile.activeDrugs]);
+  }, [activeSimulatedEntries]);
+
+  const toggleRefeedDay = (dayIndex) => {
+    updateActiveProfile((prev) => {
+      const current = Array.isArray(prev.refeedDays) ? prev.refeedDays : [];
+      const next = current.includes(dayIndex)
+        ? current.filter((d) => d !== dayIndex)
+        : [...current, dayIndex].sort((a, b) => a - b);
+      return { ...prev, refeedDays: next };
+    });
+  };
+
+  const handleAddMeal = () => {
+    const title = newMealTitle.trim();
+    if (!title) return;
+    updateActiveProfile((prev) => ({
+      ...prev,
+      mealPlan: [
+        ...(prev.mealPlan || []),
+        { id: `m_${Date.now()}`, title, items: [] },
+      ],
+    }));
+    setNewMealTitle("");
+    notify("Nova refeição criada!");
+  };
+
+  const handleDeleteMeal = (mealId) => {
+    updateActiveProfile((prev) => ({
+      ...prev,
+      mealPlan: (prev.mealPlan || []).filter((m) => m.id !== mealId),
+    }));
+    notify("Refeição removida.");
+  };
+
+  const handleAddItemToMeal = (mealId) => {
+    const foodId = mealAddFoodId[mealId] || foods[0]?.id;
+    const grams = Math.max(1, Number(mealAddGrams[mealId]) || 100);
+    if (!foodId) return;
+    updateActiveProfile((prev) => ({
+      ...prev,
+      mealPlan: (prev.mealPlan || []).map((m) =>
+        m.id === mealId ? { ...m, items: [...(m.items || []), { foodId, grams }] } : m
+      ),
+    }));
+    notify("Alimento adicionado à refeição.");
+  };
+
+  const handleUpdateMealItemGrams = (mealId, itemIdx, grams) => {
+    updateActiveProfile((prev) => ({
+      ...prev,
+      mealPlan: (prev.mealPlan || []).map((m) => {
+        if (m.id !== mealId) return m;
+        const nextItems = (m.items || []).map((it, idx) =>
+          idx === itemIdx ? { ...it, grams: Math.max(0, Number(grams) || 0) } : it
+        );
+        return { ...m, items: nextItems };
+      }),
+    }));
+  };
+
+  const handleRemoveMealItem = (mealId, itemIdx) => {
+    updateActiveProfile((prev) => ({
+      ...prev,
+      mealPlan: (prev.mealPlan || []).map((m) => {
+        if (m.id !== mealId) return m;
+        return { ...m, items: (m.items || []).filter((_, idx) => idx !== itemIdx) };
+      }),
+    }));
+  };
+
+  const handleCreateCustomFood = (e) => {
+    e.preventDefault();
+    if (!customFood.name.trim()) return;
+    const created = {
+      id: `cf_${Date.now()}`,
+      name: customFood.name.trim(),
+      group: customFood.group,
+      kcal: Math.max(0, Number(customFood.kcal) || 0),
+      p: Math.max(0, Number(customFood.p) || 0),
+      c: Math.max(0, Number(customFood.c) || 0),
+      g: Math.max(0, Number(customFood.g) || 0),
+    };
+    setFoods((prev) => [...prev, created]);
+    setCustomFood({ name: "", group: "Proteína", kcal: "", p: "", c: "", g: "" });
+    notify(`Alimento "${created.name}" adicionado à base!`);
+  };
 
   const handleSaveCaliperAssessment = () => {
     const todayIso = new Date().toISOString().slice(0, 10);
     const weight = Number(activeProfile.weightKg) || 0;
     const bf = caliperResult.bodyFatPct;
+    const leanKg = Number(Math.max(0, weight - (weight * bf) / 100).toFixed(1));
     const waist = Number(activeProfile.measurements?.waist) || null;
 
     updateActiveProfile((prev) => {
@@ -1013,10 +1175,11 @@ export default function App() {
           date: todayIso,
           weightKg: weight,
           bodyFatPct: bf,
+          leanKg,
           waistCm: waist,
           note:
             caliperNote.trim() ||
-            `Adipômetro (${(prev.caliper?.protocol || "jp3").toUpperCase()}) · Σ ${caliperResult.sumMm} mm`,
+            `Adipômetro (${(prev.caliper?.protocol || "jp3").toUpperCase()}) · Σ ${caliperResult.sumMm} mm · ${leanKg} kg MM`,
         },
       ];
       return {
@@ -1056,6 +1219,36 @@ export default function App() {
     setMainModule("clinical");
     setSubTab((prev) => ({ ...prev, clinical: "simulator" }));
     notify(`${drug.name} enviado ao simulador PK/PD.`);
+  };
+
+  const handleCreateProfile = (e) => {
+    e.preventDefault();
+    const cleanName = newProfileName.trim() || `Perfil ${profiles.length + 1}`;
+    const id = `p_${Date.now()}`;
+    const created = {
+      ...INITIAL_PROFILES[0],
+      id,
+      name: cleanName,
+      sex: newProfileSex,
+      age: Number(newProfileAge) || 30,
+      weightKg: Number(newProfileWeight) || 80,
+      targetWeightKg: Number(((Number(newProfileWeight) || 80) - 3).toFixed(1)),
+      heightCm: Number(newProfileHeight) || 175,
+      history: [
+        {
+          id: `h_${Date.now()}`,
+          date: new Date().toISOString().slice(0, 10),
+          weightKg: Number(newProfileWeight) || 80,
+          bodyFatPct: INITIAL_PROFILES[0].caliper.lastBodyFatPct,
+          leanKg: Number(((Number(newProfileWeight) || 80) * 0.85).toFixed(1)),
+          note: "Criação do perfil",
+        },
+      ],
+    };
+    setProfiles((prev) => [...prev, created]);
+    setActiveProfileId(id);
+    setNewProfileName("");
+    notify(`Perfil "${cleanName}" criado e ativado!`);
   };
 
   const handleExportJson = () => {
@@ -1128,10 +1321,10 @@ export default function App() {
 
   const activeSubTab = subTab[mainModule];
   const visibleSites = useMemo(
-    () => Object.values(SKINFORLD_SITES).filter((s) => s.view === anatomyView),
+    () => Object.values(SKINFOLD_SITES).filter((s) => s.view === anatomyView),
     [anatomyView]
   );
-  const selectedSite = SKINFORLD_SITES[selectedSiteId] || SKINFORLD_SITES.peitoral;
+  const selectedSite = SKINFOLD_SITES[selectedSiteId] || SKINFOLD_SITES.peitoral;
 
   const mainModules = [
     { id: "overview", label: "Visão Integrada", icon: Layers, defaultSub: "integrated" },
@@ -1147,7 +1340,7 @@ export default function App() {
     ],
     nutrition: [
       { id: "cycle", label: "Ciclo Calórico & Refeed" },
-      { id: "mealplan", label: "Cardápio Personalizado" },
+      { id: "mealplan", label: "Cardápio & Alimentos" },
       { id: "equivalence", label: "Equivalência Alimentar" },
     ],
     anthropometry: [
@@ -1161,7 +1354,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#071936] via-[#051024] to-[#030812] text-slate-100 pb-14">
+    <div className="min-h-screen bg-gradient-to-b from-[#071936] via-[#051024] to-[#030812] text-slate-100 pb-16">
       {toastMsg && (
         <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-[#071D3F]/95 px-4 py-3 text-sm font-medium text-cyan-100 shadow-xl backdrop-blur">
           <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0" />
@@ -1169,6 +1362,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Cabeçalho fixo */}
       <header className="sticky top-0 z-30 border-b border-cyan-500/15 bg-[#040C1B]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
@@ -1215,6 +1409,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* Nível 1: Módulos Principais */}
         <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto no-scrollbar px-4 pb-2.5">
           {mainModules.map((mod) => {
             const Icon = mod.icon;
@@ -1236,6 +1431,7 @@ export default function App() {
           })}
         </nav>
 
+        {/* Nível 2: Sub-abas */}
         <div className="border-t border-slate-800/80 bg-[#030A17]/90">
           <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto no-scrollbar px-4 py-2">
             {(subTabsByModule[mainModule] || []).map((tab) => {
@@ -1259,6 +1455,7 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 pt-6">
+        {/* Faixa de Resumo */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/65 p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Peso Atual</p>
@@ -1300,11 +1497,12 @@ export default function App() {
               {currentPkLevel}%
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {(activeProfile.activeDrugs || []).filter((d) => d.enabled).length} agente(s) ativo(s)
+              {activeSimulatedEntries.length} agente(s) ativo(s)
             </p>
           </div>
         </section>
 
+        {/* MÓDULO 1: VISÃO INTEGRADA */}
         {mainModule === "overview" && activeSubTab === "integrated" && (
           <div className="space-y-6">
             <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5">
@@ -1315,7 +1513,7 @@ export default function App() {
                     Cruzamento Longitudinal: Peso, % Gordura Real & Protocolo
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Cada avaliação salva no Adipômetro atualiza automaticamente a % de gordura e a linha do tempo integrada.
+                    Cada avaliação salva no Adipômetro atualiza automaticamente a % de gordura, a massa magra e a linha do tempo integrada.
                   </p>
                 </div>
                 <button
@@ -1421,7 +1619,7 @@ export default function App() {
                         <Calendar className="h-3 w-3 text-cyan-400" /> {entry.date}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 text-emerald-300 font-semibold">
                         {entry.weightKg} kg
                       </span>
@@ -1439,43 +1637,121 @@ export default function App() {
         )}
 
         {mainModule === "overview" && activeSubTab === "backup" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-            <h2 className="text-base font-bold text-white">Gerenciamento de Dados, Perfis & Backup</h2>
-            <p className="text-xs text-slate-400">
-              Todos os dados são salvos automaticamente no navegador deste dispositivo. Use o backup JSON para transferir ou arquivar avaliações.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleExportJson}
-                className="flex items-center gap-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-4 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
-              >
-                <Download className="h-4 w-4" /> Baixar Backup (.json)
-              </button>
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <User className="h-4 w-4 text-cyan-400" /> Perfis Clínicos & Novo Perfil
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {profiles.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setActiveProfileId(p.id)}
+                    className={`rounded-xl px-3.5 py-2 text-xs font-semibold border transition ${
+                      p.id === activeProfile.id
+                        ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200"
+                        : "border-slate-800 bg-slate-950/70 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {p.name} ({p.weightKg} kg)
+                  </button>
+                ))}
+              </div>
 
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-slate-800 border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:border-cyan-400/40 transition">
-                <Upload className="h-4 w-4 text-cyan-400" /> Importar Backup (.json)
-                <input type="file" accept="application/json" onChange={handleImportJson} className="hidden" />
-              </label>
+              <form onSubmit={handleCreateProfile} className="grid gap-3 sm:grid-cols-5 pt-2 text-xs">
+                <input
+                  type="text"
+                  placeholder="Nome do novo perfil"
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.target.value)}
+                  className="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                />
+                <select
+                  value={newProfileSex}
+                  onChange={(e) => setNewProfileSex(e.target.value)}
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                >
+                  <option value="male">Masculino</option>
+                  <option value="female">Feminino</option>
+                </select>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Peso (kg)"
+                  value={newProfileWeight}
+                  onChange={(e) => setNewProfileWeight(e.target.value)}
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                />
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-1 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3 py-2 font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
+                >
+                  <Plus className="h-4 w-4" /> Criar Perfil
+                </button>
+              </form>
+            </div>
 
-              <button
-                onClick={handleResetDemo}
-                className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-2.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition"
-              >
-                <RotateCcw className="h-4 w-4" /> Restaurar Padrão Inicial
-              </button>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Database className="h-4 w-4 text-cyan-400" /> Backup & Restauração Local (JSON)
+              </h2>
+              <p className="text-xs text-slate-400">
+                Todos os dados são salvos automaticamente no armazenamento local deste dispositivo. Exportar um arquivo JSON permite guardar cópias de segurança ou migrar entre aparelhos.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleExportJson}
+                  className="flex items-center gap-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-4 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
+                >
+                  <Download className="h-4 w-4" /> Baixar Backup (.json)
+                </button>
+
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-slate-800 border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:border-cyan-400/40 transition">
+                  <Upload className="h-4 w-4 text-cyan-400" /> Importar Backup (.json)
+                  <input type="file" accept="application/json" onChange={handleImportJson} className="hidden" />
+                </label>
+
+                <button
+                  onClick={handleResetDemo}
+                  className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-2.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition"
+                >
+                  <RotateCcw className="h-4 w-4" /> Restaurar Padrão Inicial
+                </button>
+              </div>
             </div>
           </div>
         )}
 
+        {/* MÓDULO 2: NUTRIÇÃO & DIETA */}
         {mainModule === "nutrition" && activeSubTab === "cycle" && (
           <div className="grid gap-5 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-cyan-400" /> Parâmetros Metabólicos & Ciclo Calórico
+                <Sliders className="h-4 w-4 text-cyan-400" /> Parâmetros Metabólicos, Macros & Refeed
               </h2>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <label className="space-y-1">
-                  <span className="text-slate-400">Peso (kg)</span>
+                  <span className="text-slate-400">Nome do Perfil</span>
+                  <input
+                    type="text"
+                    value={activeProfile.name}
+                    onChange={(e) => updateActiveProfile({ name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-slate-400">Sexo Biológico</span>
+                  <select
+                    value={activeProfile.sex}
+                    onChange={(e) => updateActiveProfile({ sex: e.target.value })}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                  >
+                    <option value="male">Masculino</option>
+                    <option value="female">Feminino</option>
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-slate-400">Peso Atual (kg)</span>
                   <input
                     type="number"
                     step="0.1"
@@ -1485,22 +1761,27 @@ export default function App() {
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-slate-400">Altura (cm)</span>
+                  <span className="text-slate-400">Meta de Peso (kg)</span>
                   <input
                     type="number"
-                    value={activeProfile.heightCm}
-                    onChange={(e) => updateActiveProfile({ heightCm: Number(e.target.value) })}
+                    step="0.1"
+                    value={activeProfile.targetWeightKg}
+                    onChange={(e) => updateActiveProfile({ targetWeightKg: Number(e.target.value) })}
                     className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-slate-400">Idade</span>
-                  <input
-                    type="number"
-                    value={activeProfile.age}
-                    onChange={(e) => updateActiveProfile({ age: Number(e.target.value) })}
+                  <span className="text-slate-400">Fator de Atividade</span>
+                  <select
+                    value={activeProfile.activityMultiplier}
+                    onChange={(e) => updateActiveProfile({ activityMultiplier: Number(e.target.value) })}
                     className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
-                  />
+                  >
+                    <option value={1.2}>Sedentário (1.2x)</option>
+                    <option value={1.375}>Levemente ativo (1.375x)</option>
+                    <option value={1.55}>Moderadamente ativo (1.55x)</option>
+                    <option value={1.725}>Muito ativo (1.725x)</option>
+                  </select>
                 </label>
                 <label className="space-y-1">
                   <span className="text-slate-400">Estratégia</span>
@@ -1515,62 +1796,244 @@ export default function App() {
                   </select>
                 </label>
               </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <Flame className="h-3.5 w-3.5 text-amber-400" /> Dias de Refeed na Semana
+                  </span>
+                  <span className="text-amber-300">+{activeProfile.refeedDeltaKcal || 400} kcal</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {WEEK_DAYS.map((d) => {
+                    const active = (activeProfile.refeedDays || []).includes(d.index);
+                    return (
+                      <button
+                        key={d.index}
+                        type="button"
+                        onClick={() => toggleRefeedDay(d.index)}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition ${
+                          active
+                            ? "border-amber-400/60 bg-amber-500/20 text-amber-200"
+                            : "border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        {d.short}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-3">
+            <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
               <h2 className="text-base font-bold text-white">Metas Calculadas para Hoje</h2>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="rounded-xl bg-slate-950/80 p-3 border border-slate-800">
-                  <p className="text-slate-400">TMB Estimada</p>
+                  <p className="text-slate-400">TMB Estimada (Mifflin-St Jeor)</p>
                   <p className="text-lg font-bold text-white mt-0.5">{bmrKcal} kcal</p>
                 </div>
                 <div className="rounded-xl bg-slate-950/80 p-3 border border-slate-800">
-                  <p className="text-slate-400">GET (Atividade)</p>
+                  <p className="text-slate-400">Gasto Energético Total (GET)</p>
                   <p className="text-lg font-bold text-cyan-300 mt-0.5">{tdeeKcal} kcal</p>
                 </div>
               </div>
-              <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4">
-                <p className="text-xs text-cyan-200 font-semibold">Alvo Diário ({isTodayRefeed ? "Com Refeed" : "Dia Base"})</p>
-                <p className="text-2xl font-bold text-white mt-1">{targetKcalToday} kcal</p>
-                <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-200">
+
+              <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4 space-y-2">
+                <p className="text-xs text-cyan-200 font-semibold">
+                  Alvo Diário ({isTodayRefeed ? "Dia de Refeed" : "Dia Base"})
+                </p>
+                <p className="text-2xl font-bold text-white">{targetKcalToday} kcal</p>
+                <div className="flex flex-wrap gap-3 text-xs text-slate-200 pt-1">
                   <span>Proteína: <strong>{macroTargets.proteinGrams}g</strong></span>
                   <span>Carboidratos: <strong>{macroTargets.carbGrams}g</strong></span>
                   <span>Gorduras: <strong>{macroTargets.fatGrams}g</strong></span>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <label className="space-y-1">
+                  <span className="text-slate-400">Proteína (g/kg)</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={activeProfile.macrosSplit?.pPerKg ?? 2.2}
+                    onChange={(e) =>
+                      updateActiveProfile((prev) => ({
+                        ...prev,
+                        macrosSplit: { ...(prev.macrosSplit || {}), pPerKg: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-slate-400">Gordura (g/kg)</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={activeProfile.macrosSplit?.gPerKg ?? 0.8}
+                    onChange={(e) =>
+                      updateActiveProfile((prev) => ({
+                        ...prev,
+                        macrosSplit: { ...(prev.macrosSplit || {}), gPerKg: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
+                  />
+                </label>
               </div>
             </div>
           </div>
         )}
 
         {mainModule === "nutrition" && activeSubTab === "mealplan" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-bold text-white">Cardápio Estruturado</h2>
-              <div className="text-xs text-cyan-300 font-semibold">
-                Total Planejado: {mealTotals.kcal} kcal · P {mealTotals.p}g · C {mealTotals.c}g · G {mealTotals.g}g
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-white">Cardápio Estruturado & Edição ao Vivo</h2>
+                  <p className="text-xs text-slate-400">
+                    Total Planejado: <strong className="text-cyan-300">{mealTotals.kcal} kcal</strong> · P {mealTotals.p}g · C {mealTotals.c}g · G {mealTotals.g}g
+                  </p>
+                </div>
+
+                <div className="flex gap-2 text-xs">
+                  <input
+                    type="text"
+                    placeholder="Nome da refeição (ex.: Ceia)"
+                    value={newMealTitle}
+                    onChange={(e) => setNewMealTitle(e.target.value)}
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddMeal}
+                    className="flex items-center gap-1 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3 py-1.5 font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Refeição
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {(activeProfile.mealPlan || []).map((meal) => (
+                  <div key={meal.id} className="rounded-xl border border-slate-800 bg-slate-950/75 p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <h3 className="text-sm font-bold text-cyan-200">{meal.title}</h3>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMeal(meal.id)}
+                        className="text-slate-500 hover:text-rose-400 transition"
+                        title="Remover refeição"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <ul className="space-y-2 text-xs text-slate-300">
+                      {(meal.items || []).map((it, idx) => {
+                        const f = foods.find((x) => x.id === it.foodId);
+                        if (!f) return null;
+                        const kcalItem = Math.round((f.kcal * (Number(it.grams) || 0)) / 100);
+                        return (
+                          <li key={idx} className="flex items-center justify-between gap-2 border-b border-slate-900 pb-1.5">
+                            <span className="truncate flex-1">{f.name}</span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <input
+                                type="number"
+                                value={it.grams}
+                                onChange={(e) => handleUpdateMealItemGrams(meal.id, idx, e.target.value)}
+                                className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-0.5 text-right text-white"
+                              />
+                              <span className="text-slate-400 w-14 text-right">{kcalItem} kcal</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMealItem(meal.id, idx)}
+                                className="text-slate-500 hover:text-rose-400"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    <div className="flex gap-2 pt-1 text-xs">
+                      <select
+                        value={mealAddFoodId[meal.id] || foods[0]?.id || ""}
+                        onChange={(e) => setMealAddFoodId((prev) => ({ ...prev, [meal.id]: e.target.value }))}
+                        className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-white"
+                      >
+                        {foods.map((f) => (
+                          <option key={f.id} value={f.id} className="bg-slate-900">
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="g"
+                        value={mealAddGrams[meal.id] ?? 100}
+                        onChange={(e) => setMealAddGrams((prev) => ({ ...prev, [meal.id]: e.target.value }))}
+                        className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddItemToMeal(meal.id)}
+                        className="rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-2.5 py-1.5 font-semibold text-cyan-200 hover:bg-cyan-500/30"
+                      >
+                        + Item
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {(activeProfile.mealPlan || []).map((meal) => (
-                <div key={meal.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-2">
-                  <h3 className="text-sm font-bold text-cyan-200">{meal.title}</h3>
-                  <ul className="space-y-1.5 text-xs text-slate-300">
-                    {(meal.items || []).map((it, idx) => {
-                      const f = foods.find((x) => x.id === it.foodId);
-                      if (!f) return null;
-                      const kcalItem = Math.round((f.kcal * it.grams) / 100);
-                      return (
-                        <li key={idx} className="flex items-center justify-between border-b border-slate-900 pb-1">
-                          <span>{f.name} ({it.grams}g)</span>
-                          <span className="text-slate-400">{kcalItem} kcal</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-            </div>
+            {/* Cadastrar Alimento Personalizado */}
+            <form onSubmit={handleCreateCustomFood} className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-3">
+              <h3 className="text-sm font-bold text-white">Cadastrar Alimento Personalizado (base por 100g/ml)</h3>
+              <div className="grid gap-3 sm:grid-cols-6 text-xs">
+                <input
+                  type="text"
+                  placeholder="Nome do alimento"
+                  value={customFood.name}
+                  onChange={(e) => setCustomFood((prev) => ({ ...prev, name: e.target.value }))}
+                  className="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                />
+                <input
+                  type="number"
+                  placeholder="Kcal / 100g"
+                  value={customFood.kcal}
+                  onChange={(e) => setCustomFood((prev) => ({ ...prev, kcal: e.target.value }))}
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Prot (g)"
+                  value={customFood.p}
+                  onChange={(e) => setCustomFood((prev) => ({ ...prev, p: e.target.value }))}
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Carb (g)"
+                  value={customFood.c}
+                  onChange={(e) => setCustomFood((prev) => ({ ...prev, c: e.target.value }))}
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+                />
+                <button
+                  type="submit"
+                  className="rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3 py-2 font-semibold text-cyan-200 hover:bg-cyan-500/30"
+                >
+                  Salvar Alimento
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
@@ -1632,6 +2095,7 @@ export default function App() {
           </div>
         )}
 
+        {/* MÓDULO 3: MEDIDAS & ADIPÔMETRO */}
         {mainModule === "anthropometry" && activeSubTab === "caliper" && (
           <div className="grid gap-6 lg:grid-cols-12">
             <div className="lg:col-span-5 rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
@@ -1642,6 +2106,7 @@ export default function App() {
                 </div>
                 <div className="flex rounded-xl border border-slate-700 bg-slate-950 p-0.5 text-xs">
                   <button
+                    type="button"
                     onClick={() => setAnatomyView("frontal")}
                     className={`rounded-lg px-2.5 py-1 font-medium ${
                       anatomyView === "frontal" ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400"
@@ -1650,6 +2115,7 @@ export default function App() {
                     Frente
                   </button>
                   <button
+                    type="button"
                     onClick={() => setAnatomyView("dorsal")}
                     className={`rounded-lg px-2.5 py-1 font-medium ${
                       anatomyView === "dorsal" ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400"
@@ -1730,7 +2196,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                {Object.values(SKINFORLD_SITES).map((site) => {
+                {Object.values(SKINFOLD_SITES).map((site) => {
                   const val = activeProfile.caliper?.folds?.[site.id] ?? "";
                   return (
                     <label
@@ -1791,6 +2257,7 @@ export default function App() {
                   className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
                 />
                 <button
+                  type="button"
                   onClick={handleSaveCaliperAssessment}
                   className="rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-4 py-2 text-xs font-bold text-slate-950 hover:opacity-95 transition"
                 >
@@ -1802,8 +2269,13 @@ export default function App() {
         )}
 
         {mainModule === "anthropometry" && activeSubTab === "body" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
-            <h2 className="text-base font-bold text-white">Composição Corporal & Circunferências (cm)</h2>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold text-white">Composição Corporal & Circunferências (cm)</h2>
+              <div className="text-xs text-slate-300">
+                Gordura estimada: <strong className="text-cyan-300">{bodyCompositionSummary.fatKg} kg</strong> · Massa magra: <strong className="text-emerald-300">{bodyCompositionSummary.leanKg} kg</strong>
+              </div>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               {Object.entries(activeProfile.measurements || {}).map(([key, val]) => (
                 <label key={key} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-1">
@@ -1829,6 +2301,7 @@ export default function App() {
           </div>
         )}
 
+        {/* MÓDULO 4: CLÍNICA & FÁRMACOS */}
         {mainModule === "clinical" && activeSubTab === "encyclopedia" && (
           <div className="space-y-5">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-4 flex flex-col sm:flex-row gap-3">
@@ -1862,6 +2335,7 @@ export default function App() {
                   return (
                     <button
                       key={drug.id}
+                      type="button"
                       onClick={() => setSelectedDrugId(drug.id)}
                       className={`w-full text-left rounded-xl border p-3.5 transition ${
                         isSel
@@ -1892,10 +2366,11 @@ export default function App() {
                     </span>
                     <h2 className="text-xl font-bold text-white mt-0.5">{selectedDrug.name}</h2>
                     <p className="text-xs text-slate-400">
-                      Nomes comerciais/referência: {(selectedDrug.nicknames || []).join(", ")}
+                      Nomes comerciais/referência: {(selectedDrug.nicknames || []).join(", ")} · Estado estacionário: ~{selectedDrug.steadyStateWeeks} sem
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleSendDrugToSimulator(selectedDrug)}
                     className="flex items-center gap-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/40 px-3.5 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition"
                   >
@@ -1903,29 +2378,56 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="space-y-3 text-xs leading-relaxed text-slate-300">
-                  <div>
-                    <h3 className="font-bold text-white flex items-center gap-1.5 mb-1">
-                      <BookOpen className="h-3.5 w-3.5 text-cyan-400" /> Para que serve
-                    </h3>
-                    <p>{selectedDrug.summary}</p>
-                  </div>
+                <div className="flex gap-2 text-xs">
+                  {[
+                    { id: "overview", label: "Visão & Mecanismo" },
+                    { id: "studies", label: "Estudos Clínicos" },
+                    { id: "safety", label: "Segurança & Exames" },
+                    { id: "timeline", label: "Linha do Tempo" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setDrugDetailTab(t.id)}
+                      className={`rounded-lg px-3 py-1.5 font-medium border transition ${
+                        drugDetailTab === t.id
+                          ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200"
+                          : "border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
 
-                  <div>
-                    <h3 className="font-bold text-white flex items-center gap-1.5 mb-1">
-                      <Info className="h-3.5 w-3.5 text-cyan-400" /> Como age no organismo
-                    </h3>
-                    <p>{selectedDrug.mechanism}</p>
+                {drugDetailTab === "overview" && (
+                  <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+                    <div>
+                      <h3 className="font-bold text-white flex items-center gap-1.5 mb-1">
+                        <BookOpen className="h-3.5 w-3.5 text-cyan-400" /> Para que serve
+                      </h3>
+                      <p>{selectedDrug.summary}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white flex items-center gap-1.5 mb-1">
+                        <Info className="h-3.5 w-3.5 text-cyan-400" /> Como age no organismo
+                      </h3>
+                      <p>{selectedDrug.mechanism}</p>
+                    </div>
                   </div>
+                )}
 
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
-                    <h3 className="font-bold text-cyan-200 flex items-center gap-1.5 mb-1">
-                      <FileText className="h-3.5 w-3.5 text-cyan-400" /> Evidências & Estudos Clínicos
+                {drugDetailTab === "studies" && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 text-xs leading-relaxed text-slate-300 space-y-2">
+                    <h3 className="font-bold text-cyan-200 flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-cyan-400" /> Evidências & Ensaios Clínicos
                     </h3>
-                    <p className="text-slate-300">{selectedDrug.studies}</p>
+                    <p>{selectedDrug.studies}</p>
                   </div>
+                )}
 
-                  <div className="grid gap-3 sm:grid-cols-2">
+                {drugDetailTab === "safety" && (
+                  <div className="grid gap-3 sm:grid-cols-2 text-xs">
                     <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">
                       <h4 className="font-bold text-amber-300 flex items-center gap-1.5 mb-1.5">
                         <AlertTriangle className="h-3.5 w-3.5" /> Efeitos Adversos & Atenção
@@ -1951,7 +2453,24 @@ export default function App() {
                       </p>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {drugDetailTab === "timeline" && selectedDrug.timelines && (
+                  <div className="space-y-2.5 text-xs">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
+                      <p className="font-bold text-cyan-300 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Fase Inicial</p>
+                      <p className="text-slate-300 mt-1">{selectedDrug.timelines.early}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
+                      <p className="font-bold text-cyan-300 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Fase Intermediária</p>
+                      <p className="text-slate-300 mt-1">{selectedDrug.timelines.mid}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5">
+                      <p className="font-bold text-cyan-300 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Fase Consolidada</p>
+                      <p className="text-slate-300 mt-1">{selectedDrug.timelines.late}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1963,35 +2482,85 @@ export default function App() {
               <div>
                 <h2 className="text-base font-bold text-white">Simulador Educacional de Exposição PK/PD</h2>
                 <p className="text-xs text-slate-400">
-                  Curva ilustrativa de acúmulo e decaimento baseada em meia-vida e intervalo de administração.
+                  Curva combinada e perfis individuais baseados em meia-vida, pico de absorção e intervalo de dose.
                 </p>
               </div>
-              <select
-                value={simHorizonDays}
-                onChange={(e) => setSimHorizonDays(Number(e.target.value))}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white"
-              >
-                <option value={28}>Janela de 28 dias</option>
-                <option value={56}>Janela de 56 dias</option>
-                <option value={84}>Janela de 84 dias</option>
-              </select>
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowIndividualCurves((v) => !v)}
+                  className={`rounded-xl border px-3 py-1.5 font-medium transition ${
+                    showIndividualCurves
+                      ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200"
+                      : "border-slate-700 bg-slate-950 text-slate-400"
+                  }`}
+                >
+                  {showIndividualCurves ? "Ocultar Individuais" : "Mostrar Individuais"}
+                </button>
+                <select
+                  value={simHorizonDays}
+                  onChange={(e) => setSimHorizonDays(Number(e.target.value))}
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-white"
+                >
+                  <option value={28}>Janela de 28 dias</option>
+                  <option value={56}>Janela de 56 dias</option>
+                  <option value={84}>Janela de 84 dias</option>
+                </select>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
-              <svg viewBox="0 0 700 190" className="w-full min-w-[500px] rounded-xl bg-[#040C1B] border border-slate-800 p-3">
-                <line x1="45" y1="155" x2="675" y2="155" stroke="#1e293b" strokeWidth="1" />
+              <svg viewBox="0 0 700 200" className="w-full min-w-[500px] rounded-xl bg-[#040C1B] border border-slate-800 p-3">
+                <line x1="45" y1="165" x2="675" y2="165" stroke="#1e293b" strokeWidth="1" />
+                <line x1="45" y1="25" x2="45" y2="165" stroke="#1e293b" strokeWidth="1" />
+
+                {showIndividualCurves &&
+                  simulationData.perDrugSeries.map((serie) => {
+                    if (!serie.points.length) return null;
+                    const pts = serie.points
+                      .map((pt, idx) => {
+                        const x = 50 + (idx * 615) / Math.max(1, serie.points.length - 1);
+                        const y = 160 - (pt.level / 100) * 130;
+                        return `${x},${y}`;
+                      })
+                      .join(" ");
+                    return (
+                      <polyline
+                        key={serie.uid}
+                        fill="none"
+                        stroke={serie.color}
+                        strokeWidth="1.8"
+                        strokeDasharray="4 3"
+                        opacity="0.85"
+                        points={pts}
+                      />
+                    );
+                  })}
+
                 {(() => {
-                  if (!simulationSeries.length) return null;
-                  const pts = simulationSeries
+                  const comb = simulationData.combinedSeries;
+                  if (!comb.length) return null;
+                  const pts = comb
                     .map((pt, idx) => {
-                      const x = 50 + (idx * 615) / Math.max(1, simulationSeries.length - 1);
-                      const y = 150 - (pt.level / 100) * 125;
+                      const x = 50 + (idx * 615) / Math.max(1, comb.length - 1);
+                      const y = 160 - (pt.level / 100) * 130;
                       return `${x},${y}`;
                     })
                     .join(" ");
-                  return <polyline fill="none" stroke="#22d3ee" strokeWidth="2.5" points={pts} />;
+                  return <polyline fill="none" stroke="#ffffff" strokeWidth="2.8" points={pts} />;
                 })()}
               </svg>
+            </div>
+
+            <div className="flex flex-wrap gap-3 text-xs text-slate-300">
+              <span className="flex items-center gap-1.5 font-semibold text-white">
+                <span className="h-2.5 w-2.5 rounded-full bg-white" /> Exposição Combinada
+              </span>
+              {simulationData.perDrugSeries.map((s) => (
+                <span key={s.uid} className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} /> {s.name}
+                </span>
+              ))}
             </div>
 
             <div className="space-y-2.5">
@@ -2007,10 +2576,13 @@ export default function App() {
                     className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/75 p-3 text-xs"
                   >
                     <div>
-                      <p className="font-bold text-white">{info.name}</p>
+                      <p className="font-bold text-white flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: info.color || "#22d3ee" }} />
+                        {info.name}
+                      </p>
                       <p className="text-slate-400">Meia-vida: ~{info.halfLifeHours}h · {info.route}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <label className="flex items-center gap-1 text-slate-300">
                         <span>Dose ({info.unit}):</span>
                         <input
@@ -2045,7 +2617,25 @@ export default function App() {
                           className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-white"
                         />
                       </label>
+                      <label className="flex items-center gap-1 text-slate-300">
+                        <span>Início (dia):</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={entry.startDayOffset || 0}
+                          onChange={(e) =>
+                            updateActiveProfile((prev) => ({
+                              ...prev,
+                              activeDrugs: prev.activeDrugs.map((x) =>
+                                x.uid === entry.uid ? { ...x, startDayOffset: Math.max(0, Number(e.target.value) || 0) } : x
+                              ),
+                            }))
+                          }
+                          className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-white"
+                        />
+                      </label>
                       <button
+                        type="button"
                         onClick={() =>
                           updateActiveProfile((prev) => ({
                             ...prev,
