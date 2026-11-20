@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 const STORAGE_KEY = "nexusprotocol_v1_state";
+
 const DEFAULT_FOODS = [
   { id: "f1", name: "Peito de frango grelhado (100g)", kcal: 165, p: 31, c: 0, g: 3.6, group: "Proteína" },
   { id: "f2", name: "Ovo inteiro cozido (1 un. ~50g)", kcal: 72, p: 6.3, c: 0.4, g: 4.8, group: "Proteína" },
@@ -48,6 +49,7 @@ const DEFAULT_FOODS = [
   { id: "f17", name: "Azeite de oliva extravirgem (10ml)", kcal: 88, p: 0, c: 0, g: 10.0, group: "Gordura" },
   { id: "f18", name: "Abacate / Avocado (100g)", kcal: 160, p: 2.0, c: 8.5, g: 14.7, group: "Gordura" },
 ];
+
 const DRUG_CATALOG = [
   {
     id: "semaglutida",
@@ -117,6 +119,74 @@ const DRUG_CATALOG = [
       early: "Semanas 1–2: Resposta rápida na sinalização de saciedade e redução do impulso alimentar; adaptação GI inicial.",
       mid: "Semanas 4–8: Estabilização da curva semanal; queda expressiva do apetite e necessidade de priorizar proteína por refeição.",
       late: "Semanas 12+: Fase de perda ponderal sustentada ou ajuste de dose de manutenção conforme metas clínicas.",
+    },
+  },
+  {
+    id: "liraglutida",
+    name: "Liraglutida",
+    nicknames: ["Saxenda", "Victoza"],
+    category: "Peptídeos Metabólicos & Incretinas",
+    route: "SC diário",
+    halfLifeHours: 13,
+    intervalDays: 1,
+    defaultDoseMg: 1.8,
+    unit: "mg",
+    peakDays: 0.5,
+    steadyStateWeeks: 1,
+    potencyFactor: 0.85,
+    summary:
+      "Agonista de receptor de GLP-1 de administração diária e meia-vida mais curta (~13 horas), permitindo ajustes diários de tolerabilidade.",
+    mechanism:
+      "Estimula a liberação de insulina dependente de glicose, reduz a secreção inadequada de glucagon e atua em centros hipotalâmicos de saciedade, retardando o esvaziamento gástrico.",
+    studies:
+      "No estudo SCALE Obesity and Prediabetes (3,0 mg/dia), promoveu redução média de cerca de ~8,0% do peso corporal em 56 semanas versus ~2,6% com placebo, além de redução na prevalência de pré-diabetes.",
+    sideEffects: [
+      "Náuseas, diarreia, constipação e cefaleia nas primeiras semanas",
+      "Aumento discreto da frequência cardíaca de repouso em alguns indivíduos",
+    ],
+    contraindications: [
+      "Histórico de CMT ou NEM tipo 2",
+      "Gestação, lactação ou hipersensibilidade",
+    ],
+    monitoring: ["HbA1c e glicemia", "Frequência cardíaca e pressão arterial", "Função renal"],
+    timelines: {
+      early: "Semanas 1–2: Atinge platô diário rapidamente devido à meia-vida de ~13h; titulação gradual ajuda na tolerância GI.",
+      mid: "Semanas 4–8: Controle diário estável do apetite; vantagem de poder pausar/ajustar com menor persistência residual.",
+      late: "Semanas 12+: Avaliação de resposta clínica (meta clássica de ≥5% de perda ponderal em 12 semanas na dose alvo).",
+    },
+  },
+  {
+    id: "dulaglutida",
+    name: "Dulaglutida",
+    nicknames: ["Trulicity"],
+    category: "Peptídeos Metabólicos & Incretinas",
+    route: "SC semanal",
+    halfLifeHours: 112,
+    intervalDays: 7,
+    defaultDoseMg: 1.5,
+    unit: "mg",
+    peakDays: 2,
+    steadyStateWeeks: 3,
+    potencyFactor: 0.82,
+    summary:
+      "Agonista de receptor de GLP-1 conjugado a fragmento Fc de IgG4 humana, de aplicação semanal.",
+    mechanism:
+      "Aumenta o AMPc intracelular nas células beta pancreáticas na presença de glicose elevada, suprime glucagon e modula saciedade via GLP-1.",
+    studies:
+      "Nos programas AWARD e no estudo cardiovascular REWIND, demonstrou redução sustentada de HbA1c em diabetes tipo 2 e redução de desfechos cardiovasculares adversos maiores.",
+    sideEffects: [
+      "Náusea, vômito, diarreia e dor abdominal leve a moderada",
+      "Plenitude pós-prandial",
+    ],
+    contraindications: [
+      "Histórico de CMT ou NEM tipo 2",
+      "Gestação ou lactação",
+    ],
+    monitoring: ["HbA1c", "Função renal", "Sintomas gastrointestinais"],
+    timelines: {
+      early: "Semanas 1–2: Início da modulação glicêmica e saciedade moderada.",
+      mid: "Semanas 4–8: Estabilização das concentrações semanais e redução de picos glicêmicos pós-prandiais.",
+      late: "Semanas 12+: Consolidação do controle glicêmico e metabólico.",
     },
   },
   {
@@ -293,6 +363,39 @@ const DRUG_CATALOG = [
     },
   },
   {
+    id: "liotironina",
+    name: "Liotironina Sódica (T3)",
+    nicknames: ["Cynomel"],
+    category: "Eixo Tireoidiano",
+    route: "VO diário (1 a 2 tomadas)",
+    halfLifeHours: 24,
+    intervalDays: 1,
+    defaultDoseMg: 0.025,
+    unit: "mg",
+    peakDays: 0.15,
+    steadyStateWeeks: 1,
+    potencyFactor: 1.1,
+    summary:
+      "Forma sintética do hormônio tireoidiano ativo T3, com início de ação mais rápido e meia-vida em torno de 24 horas.",
+    mechanism:
+      "Exerce ação direta sobre receptores nucleares de hormônios tireoidianos sem depender de desiodação periférica prévia, elevando a atividade metabólica e o consumo energético celular.",
+    studies:
+      "Estudos clínicos avaliam a liotironina em cenários específicos de tireoidologia e terapia combinada T4+T3 em pacientes selecionados, destacando maior sensibilidade a oscilações de dose e efeitos cardiovasculares em comparação ao T4 isolado.",
+    sideEffects: [
+      "Taquicardia, palpitações, arritmias, nervosismo, insônia ou intolerância ao calor",
+      "Risco aumentado de catabolismo proteico e sobrecarga cardíaca se usado em doses excessivas",
+    ],
+    contraindications: [
+      "Tireotoxicose, insuficiência adrenal não tratada ou arritmias/cardiopatia isquêmica descompensada",
+    ],
+    monitoring: ["TSH, T4 livre e T3 livre", "Frequência cardíaca, pressão arterial e eletrocardiograma se indicado"],
+    timelines: {
+      early: "Semanas 1–2: Resposta metabólica e simpática rápida devido à meia-vida curta (~24h).",
+      mid: "Semanas 4–8: Avaliação de tolerância cardiovascular, sono e estabilidade energética.",
+      late: "Semanas 12+: Reavaliação médica periódica para evitar excesso tireoidiano subclínico.",
+    },
+  },
+  {
     id: "metformina",
     name: "Metformina (IR / XR)",
     nicknames: ["Glifage", "Glifage XR"],
@@ -312,8 +415,7 @@ const DRUG_CATALOG = [
     studies:
       "Em estudos clássicos como o UKPDS, demonstrou redução consistente de complicações microvasculares e desfechos cardiovasculares em pacientes com diabetes tipo 2, com excelente perfil de segurança quando respeitada a função renal.",
     sideEffects: [
-   
-    "Desconforto gastrointestinal (gases, diarreia, náuseas) — mais comum na liberação imediata e reduzido com XR e ingestão junto às refeições",
+      "Desconforto gastrointestinal (gases, diarreia, náuseas) — mais comum na liberação imediata e reduzido com XR e ingestão junto às refeições",
       "Redução gradual dos níveis de vitamina B12 com uso prolongado",
     ],
     contraindications: [
@@ -327,7 +429,108 @@ const DRUG_CATALOG = [
       late: "Semanas 12+: Controle de HbA1c e acompanhamento anual de função renal e vitamina B12.",
     },
   },
+  {
+    id: "sglt2",
+    name: "Empagliflozina / Dapagliflozina",
+    nicknames: ["Jardiance", "Forxiga"],
+    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
+    route: "VO 1x/dia",
+    halfLifeHours: 12,
+    intervalDays: 1,
+    defaultDoseMg: 10,
+    unit: "mg",
+    peakDays: 0.1,
+    steadyStateWeeks: 1,
+    potencyFactor: 0.78,
+    summary:
+      "Inibidores do cotransportador sódio-glicose 2 (SGLT2) no túbulo proximal renal, promovendo glicosúria e proteção cardiorrenal.",
+    mechanism:
+      "Bloqueiam a reabsorção renal de glicose e sódio via SGLT2, aumentando a excreção urinária de glicose (com leve perda calórica associada), reduzindo a pressão intraglomerular e modulando o equilíbrio hemodinâmico.",
+    studies:
+      "Nos ensaios EMPA-REG OUTCOME, DECLARE-TIMI 58, DAPA-HF e EMPEROR-Reduced, demonstraram redução de hospitalizações por insuficiência cardíaca, proteção renal progressiva e redução de risco cardiovascular.",
+    sideEffects: [
+      "Infecções fúngicas genitais e infecções do trato urinário",
+      "Depleção volêmica leve, hipotensão postural ou sede aumentada",
+      "Raro: cetoacidose euglicêmica em situações de estresse agudo, jejum prolongado ou restrição severa de carboidratos",
+    ],
+    contraindications: [
+      "Hipersensibilidade ao fármaco ou situações de risco elevado para cetoacidose sem manejo médico",
+    ],
+    monitoring: ["TFGe e eletrólitos", "Pressão arterial e hidratação", "Higiene íntima e sinais de infecção"],
+    timelines: {
+      early: "Semanas 1–2: Início da glicosúria e ajuste hemodinâmico/diurético leve.",
+      mid: "Semanas 4–8: Estabilização da TFGe inicial e melhora glicêmica/cardiorrenal.",
+      late: "Semanas 12+: Benefício protetor cardiorrenal e metabólico de médio/longo prazo.",
+    },
+  },
+  {
+    id: "estatina",
+    name: "Rosuvastatina / Atorvastatina",
+    nicknames: ["Crestor", "Lipitor"],
+    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
+    route: "VO 1x/dia",
+    halfLifeHours: 19,
+    intervalDays: 1,
+    defaultDoseMg: 20,
+    unit: "mg",
+    peakDays: 0.2,
+    steadyStateWeeks: 1,
+    potencyFactor: 0.75,
+    summary:
+      "Inibidores da HMG-CoA redutase (estatinas) que reduzem a síntese hepática de colesterol e aumentam a captação de LDL-colesterol.",
+    mechanism:
+      "Inibem competitivamente a enzima limitante da biossíntese de colesterol no fígado, levando à maior expressão de receptores de LDL na superfície dos hepatócitos e queda acentuada do LDL circulante.",
+    studies:
+      "Extensa evidência clínica (incluindo JUPITER e metanálises CTT) comprova redução consistente de infarto, AVC e mortalidade cardiovascular proporcional à redução do LDL-colesterol.",
+    sideEffects: [
+      "Mialgia leve, dor articular, cefaleia ou elevação discreta de enzimas hepáticas em pequena parcela dos casos",
+      "Raro: miopatia significativa ou rabdomiólise (atenção a dor muscular difusa intensa e escurecimento urinário)",
+    ],
+    contraindications: [
+      "Doença hepática ativa não esclarecida, gestação e lactação",
+    ],
+    monitoring: ["Perfil lipídico (LDL, HDL, triglicerídeos)", "TGO/TGP e CK se houver sintomas musculares"],
+    timelines: {
+      early: "Semanas 1–2: Início rápido da queda do LDL-colesterol.",
+      mid: "Semanas 4–8: Queda expressiva e próximo do platô lipídico para reavaliação laboratorial.",
+      late: "Semanas 12+: Consolidação da redução de risco cardiovascular de longo prazo.",
+    },
+  },
+  {
+    id: "orlistate",
+    name: "Orlistate",
+    nicknames: ["Xenical"],
+    category: "Metabolismo Glicídico, Lipídico & Cardiometabólico",
+    route: "VO até 3x/dia às refeições com gordura",
+    halfLifeHours: 2,
+    intervalDays: 1,
+    defaultDoseMg: 120,
+    unit: "mg",
+    peakDays: 0.1,
+    steadyStateWeeks: 1,
+    potencyFactor: 0.65,
+    summary:
+      "Inibidor seletivo e reversível das lipases gastrointestinais que reduz em cerca de ~30% a absorção da gordura dietética no trato digestivo.",
+    mechanism:
+      "Liga-se covalentemente ao sítio ativo das lipases gástrica e pancreática no lúmen intestinal, impedindo a hidrólise de triglicerídeos em ácidos graxos absorvíveis e aumentando sua eliminação nas fezes.",
+    studies:
+      "No estudo XENDOS (4 anos), associado a mudanças de estilo de vida, reduziu a incidência de diabetes tipo 2 e promoveu maior perda de peso sustentada em relação ao placebo.",
+    sideEffects: [
+      "Esteatorreia (fezes oleosas), flatulência com descarga oleosa, urgência fecal — diretamente proporcionais ao teor de gordura da refeição",
+      "Redução potencial da absorção de vitaminas lipossolúveis (A, D, E, K) se não houver separação/suplementação adequada",
+    ],
+    contraindications: [
+      "Síndrome de má absorção crônica, colestase, gestação ou lactação",
+    ],
+    monitoring: ["Aderência dietética ao teor de gordura por refeição", "Vitaminas lipossolúveis em uso prolongado"],
+    timelines: {
+      early: "Semanas 1–2: Efeito luminal imediato a cada refeição com gordura; resposta GI reflete o consumo lipídico.",
+      mid: "Semanas 4–8: Ajuste alimentar prático para evitar desconfortos intestinais.",
+      late: "Semanas 12+: Avaliação da perda ponderal acumulada e estado nutricional.",
+    },
+  },
 ];
+
 const SKINFORLD_SITES = {
   peitoral: {
     id: "peitoral",
@@ -476,7 +679,7 @@ function calculateBodyFatFromFolds({ protocol, sex, age, folds }) {
   }
 
   const clampedDensity = Math.max(0.98, Math.min(1.15, bodyDensity));
-  const bodyFatPct = Math.max(3, Math.min(55, (495 / clampedDensity - 450)));
+  const bodyFatPct = Math.max(3, Math.min(55, 495 / clampedDensity - 450));
 
   return {
     sumMm: Number(sum.toFixed(1)),
@@ -504,6 +707,7 @@ function simulateConcentrationAtDay(drug, doseMg, intervalDays, day) {
   const normalizedLevel = maxSingleDosePeak > 0 ? (total / maxSingleDosePeak) * 50 : 0;
   return Math.min(100, Number(normalizedLevel.toFixed(1)));
 }
+
 const INITIAL_PROFILES = [
   {
     id: "p1",
@@ -514,8 +718,8 @@ const INITIAL_PROFILES = [
     weightKg: 82.4,
     targetWeightKg: 78.0,
     activityMultiplier: 1.55,
-    goalMode: "recomp", // cut | recomp | bulk
-    refeedDays: [3, 6], // 0=Dom .. 6=Sab
+    goalMode: "recomp",
+    refeedDays: [3, 6],
     refeedDeltaKcal: 450,
     macrosSplit: { pPerKg: 2.2, gPerKg: 0.8 },
     measurements: {
@@ -529,7 +733,7 @@ const INITIAL_PROFILES = [
       calf: 37,
     },
     caliper: {
-      protocol: "jp3", // jp3 | jp7
+      protocol: "jp3",
       folds: {
         peitoral: 9,
         abdomen: 17,
@@ -584,7 +788,6 @@ export default function App() {
   const [activeProfileId, setActiveProfileId] = useState(saved?.activeProfileId || "p1");
   const [foods, setFoods] = useState(saved?.foods || DEFAULT_FOODS);
 
-  // Navegação em 2 níveis (4 módulos principais + sub-abas contextuais)
   const [mainModule, setMainModule] = useState(saved?.mainModule || "overview");
   const [subTab, setSubTab] = useState({
     overview: "integrated",
@@ -593,19 +796,16 @@ export default function App() {
     clinical: "encyclopedia",
   });
 
-  // Estados do Adipômetro e Mapa Anatômico
   const [selectedSiteId, setSelectedSiteId] = useState("peitoral");
   const [anatomyView, setAnatomyView] = useState("frontal");
   const [caliperNote, setCaliperNote] = useState("");
   const [toastMsg, setToastMsg] = useState("");
 
-  // Estados da Enciclopédia Clínica e Simulador PK/PD
   const [drugSearch, setDrugSearch] = useState("");
   const [drugCategoryFilter, setDrugCategoryFilter] = useState("Todos");
   const [selectedDrugId, setSelectedDrugId] = useState("semaglutida");
   const [simHorizonDays, setSimHorizonDays] = useState(56);
 
-  // Estados de Equivalência Alimentar
   const [equivSourceId, setEquivSourceId] = useState("f11");
   const [equivTargetId, setEquivTargetId] = useState("f10");
   const [equivSourceGrams, setEquivSourceGrams] = useState(150);
@@ -641,7 +841,22 @@ export default function App() {
       prev.map((p) => {
         if (p.id !== activeProfile.id) return p;
         return typeof updater === "function" ? updater(p) : { ...p, ...updater };
-    const bmrKcal = useMemo(() => {
+      })
+    );
+  };
+
+  const setActiveSubTab = (tabName) => {
+    setSubTab((prev) => ({ ...prev, [mainModule]: tabName }));
+  };
+
+  const handleSelectMainModule = (modKey, defaultSub) => {
+    setMainModule(modKey);
+    if (defaultSub) {
+      setSubTab((prev) => ({ ...prev, [modKey]: defaultSub }));
+    }
+  };
+
+  const bmrKcal = useMemo(() => {
     const w = Number(activeProfile.weightKg) || 75;
     const h = Number(activeProfile.heightCm) || 175;
     const a = Number(activeProfile.age) || 30;
@@ -656,7 +871,7 @@ export default function App() {
   const goalAdjustmentKcal = useMemo(() => {
     if (activeProfile.goalMode === "cut") return -450;
     if (activeProfile.goalMode === "bulk") return 350;
-    return -150; // recomp
+    return -150;
   }, [activeProfile.goalMode]);
 
   const todayDayOfWeek = new Date().getDay();
@@ -954,7 +1169,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Cabeçalho */}
       <header className="sticky top-0 z-30 border-b border-cyan-500/15 bg-[#040C1B]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
@@ -1001,7 +1215,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Nível 1: Módulos Principais */}
         <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto no-scrollbar px-4 pb-2.5">
           {mainModules.map((mod) => {
             const Icon = mod.icon;
@@ -1023,7 +1236,6 @@ export default function App() {
           })}
         </nav>
 
-        {/* Nível 2: Sub-abas Contextuais */}
         <div className="border-t border-slate-800/80 bg-[#030A17]/90">
           <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto no-scrollbar px-4 py-2">
             {(subTabsByModule[mainModule] || []).map((tab) => {
@@ -1046,9 +1258,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
       <main className="mx-auto max-w-6xl space-y-6 px-4 pt-6">
-        {/* Faixa de Resumo Integrado */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/65 p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Peso Atual</p>
@@ -1095,7 +1305,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* MÓDULO 1: VISÃO INTEGRADA */}
         {mainModule === "overview" && activeSubTab === "integrated" && (
           <div className="space-y-6">
             <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5">
@@ -1118,7 +1327,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Gráfico SVG de Evolução */}
               <div className="mt-5 overflow-x-auto">
                 <svg viewBox="0 0 700 220" className="w-full min-w-[520px] rounded-xl bg-[#040C1B] p-3 border border-slate-800">
                   <line x1="50" y1="180" x2="670" y2="180" stroke="#1e293b" strokeWidth="1" />
@@ -1202,7 +1410,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Histórico de Avaliações */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
               <h3 className="text-sm font-bold text-white mb-3">Registro Cronológico Integrado</h3>
               <div className="divide-y divide-slate-800/80">
@@ -1260,7 +1467,6 @@ export default function App() {
           </div>
         )}
 
-        {/* MÓDULO 2: NUTRIÇÃO & DIETA */}
         {mainModule === "nutrition" && activeSubTab === "cycle" && (
           <div className="grid gap-5 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
@@ -1426,10 +1632,8 @@ export default function App() {
           </div>
         )}
 
-        {/* MÓDULO 3: MEDIDAS & ADIPÔMETRO */}
         {mainModule === "anthropometry" && activeSubTab === "caliper" && (
           <div className="grid gap-6 lg:grid-cols-12">
-            {/* Mapa Anatômico Interativo */}
             <div className="lg:col-span-5 rounded-2xl border border-cyan-500/20 bg-slate-900/65 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -1458,7 +1662,6 @@ export default function App() {
 
               <div className="relative mx-auto max-w-[270px] rounded-2xl border border-slate-800 bg-[#040C1B] p-3">
                 <svg viewBox="0 0 100 100" className="w-full h-72">
-                  {/* Silhueta esquemática */}
                   <circle cx="50" cy="14" r="7" fill="#0f294a" stroke="#22d3ee" strokeWidth="1.2" />
                   <path
                     d="M32 25 Q50 21 68 25 L72 52 L60 54 L58 92 L46 92 L45 58 L39 92 L27 92 L29 52 Z"
@@ -1503,7 +1706,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Calculadora de Pregas Cutâneas */}
             <div className="lg:col-span-7 rounded-2xl border border-slate-800 bg-slate-900/65 p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -1627,7 +1829,6 @@ export default function App() {
           </div>
         )}
 
-        {/* MÓDULO 4: CLÍNICA & FÁRMACOS */}
         {mainModule === "clinical" && activeSubTab === "encyclopedia" && (
           <div className="space-y-5">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-4 flex flex-col sm:flex-row gap-3">
@@ -1870,17 +2071,3 @@ export default function App() {
     </div>
   );
 }
-    })
-    );
-  };
-
-  const setActiveSubTab = (tabName) => {
-    setSubTab((prev) => ({ ...prev, [mainModule]: tabName }));
-  };
-
-  const handleSelectMainModule = (modKey, defaultSub) => {
-    setMainModule(modKey);
-    if (defaultSub) {
-      setSubTab((prev) => ({ ...prev, [modKey]: defaultSub }));
-    }
-  };                                                             
