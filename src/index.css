@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    background-color: #040B16;
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Oculta barra de rolagem horizontal mantendo o scroll suave no iPad/iPhone */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
